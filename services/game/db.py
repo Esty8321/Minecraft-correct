@@ -4,6 +4,14 @@ from typing import Optional, List
 import numpy as np
 import torch
 from .settings import DB_PATH, W, H, DTYPE
+import json
+import os
+from json import JSONDecodeError
+from .models import Message
+from .settings import DB_PATH, W, H, DTYPE
+
+BASE_ROOT_DIR = Path(__file__).resolve().parents[2] 
+MESSAGES_JSON_PATH = BASE_ROOT_DIR / "data" / "message.json"
 
 class ChunkDB:
     def __init__(self, db_path: Path =DB_PATH):
@@ -78,3 +86,48 @@ def load_chunk(cid: str)-> Optional[torch.Tensor]:
 
 def clear_player_bits_all()->None:
     _db.clear_player_bits_all()
+
+def _safe_load_messages() -> dict:
+    """טוען את קובץ ההודעות בבטחה (גם אם ריק/מקולקל)."""
+    if not MESSAGES_JSON_PATH.exists():
+        return {}
+    try:
+        with open(MESSAGES_JSON_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (JSONDecodeError, ValueError):
+        return {}
+def save_message(message: Message) -> None:
+    """שומר הודעה חדשה בקובץ JSON"""
+    try:
+        print(f"[DEBUG] Saving message: {message.to_dict()}")
+        MESSAGES_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+        messages = _safe_load_messages()
+        location_key = f"{message.chunk_id}_{message.position[0]}_{message.position[1]}"
+        messages[location_key] = message.to_dict()
+
+        # כתיבה אטומית
+        tmp_path = MESSAGES_JSON_PATH.with_suffix(".tmp")
+        with open(tmp_path, 'w', encoding='utf-8') as f:
+            json.dump(messages, f, indent=2, ensure_ascii=False)
+        os.replace(tmp_path, MESSAGES_JSON_PATH)
+
+        print(f"[DEBUG] Message saved successfully to {MESSAGES_JSON_PATH}")
+    except Exception as e:
+        print(f"[ERROR] Failed to save message: {e}")
+        raise
+    
+def get_message(chunk_id: str, row: int, col: int) -> dict | None:
+    messages = _safe_load_messages()
+    return messages.get(f"{chunk_id}_{row}_{col}")
+  
+
+def load_message(chunk_id: str, row: int, col: int) -> dict | None:
+    """טוען הודעה מקובץ ה-JSON לפי מיקום"""
+    try:
+        messages = _safe_load_messages()
+        return messages.get(f"{chunk_id}_{row}_{col}")
+    except Exception as e:
+        print(f"[game] Error loading message: {e}")
+        return None
+  

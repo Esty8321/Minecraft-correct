@@ -105,24 +105,67 @@ const authProxy = createProxyMiddleware({
 app.use('/auth', authProxy);
 
 // --------------------- /game proxy ---------------------
+// const gameProxy = createProxyMiddleware({
+//   target: GAME_SERVICE_URL,
+//   pathRewrite: { '^/game': '/' },
+//   changeOrigin: true,
+//   ws: true,
+//   logLevel: 'debug',
+//   onProxyReqWs: (proxyReq, req, socket, options, head) => {
+//     try {
+//       const token = getTokenFromReq(req);
+//       if (token) proxyReq.setHeader('Authorization', `Bearer ${token}`);
+//       if (proxyReq.getHeader('host')) {
+//         proxyReq.setHeader('host', new URL(GAME_SERVICE_URL).host);
+//       }
+//     } catch (e) {
+//       console.error('[EDGE][WS] onProxyReqWs error', e);
+//     }
+//   }
+// });
+
 const gameProxy = createProxyMiddleware({
   target: GAME_SERVICE_URL,
   pathRewrite: { '^/game': '/' },
   changeOrigin: true,
   ws: true,
   logLevel: 'debug',
-  onProxyReqWs: (proxyReq, req, socket, options, head) => {
+  onProxyReqWs: (proxyReq, req, socket) => {
     try {
-      const token = getTokenFromReq(req);
-      if (token) proxyReq.setHeader('Authorization', `Bearer ${token}`);
-      if (proxyReq.getHeader('host')) {
-        proxyReq.setHeader('host', new URL(GAME_SERVICE_URL).host);
+      // נחלץ token מה-URL של ה-upgrade (ws://.../game/ws?token=XXX)
+      const full = req.url.startsWith('http')
+        ? req.url
+        : `http://${req.headers.host || 'localhost'}${req.url}`;
+      const u = new URL(full);
+      const token =
+        u.searchParams.get('token') || getTokenFromReq(req); // fallback לכותרת Authorization אם יש
+
+      console.log('[EDGE][WS] upgrade url=', req.url, 'token?', !!token);
+
+      if (!token) {
+        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+        socket.destroy();
+        return;
       }
-    } catch (e) {
-      console.error('[EDGE][WS] onProxyReqWs error', e);
+
+      // אימות טוקן ב-edge (אותה סוד/אלגוריתם כמו ב-auth/game)
+      const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+      console.log('[EDGE][WS] token OK: sub=', payload?.sub, 'username=', payload?.username);
+
+      // נעביר ל-upstream כ-Authorization: Bearer ...
+      proxyReq.setHeader('Authorization', `Bearer ${token}`);
+
+      // יישור Host header ליעד (להימנע מ-Host mismatch)
+      const targetHost = new URL(GAME_SERVICE_URL).host;
+      proxyReq.setHeader('host', targetHost);
+    } catch (err) {
+      console.log('[EDGE][WS] token verify failed:', err?.message || String(err));
+      try { socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n'); } catch {}
+      try { socket.destroy(); } catch {}
     }
-  }
+  },
 });
+
 
 // HTTP requests to /game require JWT
 app.use('/game', (req, res, next) => {
