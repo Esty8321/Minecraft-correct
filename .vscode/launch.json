@@ -1,0 +1,82 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Client (npm)",
+      "type": "pwa-node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/client",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Open Client in Chrome",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/client",
+      "userDataDir": "${workspaceFolder}/.vscode/chrome-debug-profile",
+      "runtimeArgs": ["--disable-extensions"]
+    },
+    {
+      "name": "Run Edge (npm)",
+      "type": "pwa-node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/edge",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Auth Server (uvicorn)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "services.auth.main:app",
+        "--env-file",
+        "services/auth/.env",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "7001",
+        "--reload"
+      ],
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false,
+      "subProcess": true,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Game Server (uvicorn)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "services.game.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "7002",
+        "--reload"
+      ],
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false,
+      "subProcess": true,
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug Full Stack (client+edge+auth+game+browser)",
+      "configurations": [
+        "Run Client (npm)",
+        "Run Edge (npm)",
+        "Debug Auth Server (uvicorn)",
+        "Debug Game Server (uvicorn)",
+        "Open Client in Chrome"
+      ]
+    }
+  ]
+}

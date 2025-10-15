@@ -1,0 +1,301 @@
+import { createHotContext as __vite__createHotContext } from "/@vite/client";import.meta.hot = __vite__createHotContext("/src/components/LoginForm.tsx");import __vite__cjsImport0_react_jsxDevRuntime from "/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=9f0b1529"; const Fragment = __vite__cjsImport0_react_jsxDevRuntime["Fragment"]; const jsxDEV = __vite__cjsImport0_react_jsxDevRuntime["jsxDEV"];
+import * as RefreshRuntime from "/@react-refresh";
+const inWebWorker = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope;
+let prevRefreshReg;
+let prevRefreshSig;
+if (import.meta.hot && !inWebWorker) {
+  if (!window.$RefreshReg$) {
+    throw new Error(
+      "@vitejs/plugin-react can't detect preamble. Something is wrong."
+    );
+  }
+  prevRefreshReg = window.$RefreshReg$;
+  prevRefreshSig = window.$RefreshSig$;
+  window.$RefreshReg$ = RefreshRuntime.getRefreshReg("C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx");
+  window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
+}
+var _s = $RefreshSig$();
+import __vite__cjsImport3_react from "/node_modules/.vite/deps/react.js?v=9f0b1529"; const useState = __vite__cjsImport3_react["useState"];
+import { LogIn, Mail, User, Loader2 } from "/node_modules/lucide-react/dist/esm/lucide-react.js?v=9f0b1529";
+import { authApi, ApiError } from "/src/utils/api.ts";
+import { authStorage } from "/src/utils/auth.ts";
+export default function LoginForm({ onSuccess, onDone }) {
+  _s();
+  const [loginMethod, setLoginMethod] = useState("username");
+  const [formData, setFormData] = useState({ username: "", email: "" });
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const validateForm = () => {
+    const newErrors = {};
+    if (loginMethod === "username") {
+      if (!formData.username.trim()) {
+        newErrors.username = "Username is required";
+      }
+    } else {
+      if (!formData.email.trim()) {
+        newErrors.email = "Email is required";
+      } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+        newErrors.email = "Please enter a valid email address";
+      }
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    setIsLoading(true);
+    setErrors({});
+    try {
+      const loginData = loginMethod === "username" ? { username: formData.username } : { email: formData.email };
+      const response = await authApi.login(loginData);
+      if (response.token) {
+        authStorage.setToken(response.token);
+        authStorage.setUser(response.user);
+        onSuccess?.(response.user, response.token);
+        onDone?.();
+      }
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.message.includes("user_not_found")) {
+          setErrors({
+            general: "User not found. Please check your credentials."
+          });
+        } else {
+          setErrors({ general: error.message });
+        }
+      } else {
+        setErrors({ general: "Login failed. Please try again." });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+  const handleMethodChange = (method) => {
+    setLoginMethod(method);
+    setFormData({ username: "", email: "" });
+    setErrors({});
+  };
+  const getInputIcon = () => loginMethod === "username" ? /* @__PURE__ */ jsxDEV(User, { className: "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" }, void 0, false, {
+    fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+    lineNumber: 115,
+    columnNumber: 3
+  }, this) : /* @__PURE__ */ jsxDEV(Mail, { className: "absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" }, void 0, false, {
+    fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+    lineNumber: 117,
+    columnNumber: 3
+  }, this);
+  const getInputPlaceholder = () => loginMethod === "username" ? "Enter your username" : "Enter your email";
+  return /* @__PURE__ */ jsxDEV("div", { className: "w-full max-w-md", children: [
+    /* @__PURE__ */ jsxDEV("div", { className: "text-center mb-8", children: [
+      /* @__PURE__ */ jsxDEV("div", { className: "inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-full mb-4", children: /* @__PURE__ */ jsxDEV(LogIn, { className: "w-8 h-8 text-white" }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+        lineNumber: 127,
+        columnNumber: 11
+      }, this) }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+        lineNumber: 126,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV("h2", { className: "text-3xl font-bold text-gray-800 mb-2", children: "Welcome Back" }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+        lineNumber: 129,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV("p", { className: "text-gray-600", children: "Sign in to your account" }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+        lineNumber: 130,
+        columnNumber: 9
+      }, this)
+    ] }, void 0, true, {
+      fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+      lineNumber: 125,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ jsxDEV("form", { onSubmit: handleSubmit, className: "space-y-6", children: [
+      errors.general && /* @__PURE__ */ jsxDEV("div", { className: "bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm", children: errors.general }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+        lineNumber: 135,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV("div", { children: [
+        /* @__PURE__ */ jsxDEV("label", { className: "block text-sm font-medium text-gray-700 mb-3", children: "Login Method" }, void 0, false, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+          lineNumber: 142,
+          columnNumber: 11
+        }, this),
+        /* @__PURE__ */ jsxDEV("div", { className: "grid grid-cols-2 gap-2", children: [
+          /* @__PURE__ */ jsxDEV(
+            "button",
+            {
+              type: "button",
+              onClick: () => handleMethodChange("username"),
+              className: `flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${loginMethod === "username" ? "bg-blue-100 text-blue-700 border border-blue-300" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`,
+              children: "Username"
+            },
+            void 0,
+            false,
+            {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+              lineNumber: 146,
+              columnNumber: 13
+            },
+            this
+          ),
+          /* @__PURE__ */ jsxDEV(
+            "button",
+            {
+              type: "button",
+              onClick: () => handleMethodChange("email"),
+              className: `flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${loginMethod === "email" ? "bg-blue-100 text-blue-700 border border-blue-300" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`,
+              children: "Email"
+            },
+            void 0,
+            false,
+            {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+              lineNumber: 157,
+              columnNumber: 13
+            },
+            this
+          )
+        ] }, void 0, true, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+          lineNumber: 145,
+          columnNumber: 11
+        }, this)
+      ] }, void 0, true, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+        lineNumber: 141,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV("div", { children: [
+        /* @__PURE__ */ jsxDEV(
+          "label",
+          {
+            htmlFor: loginMethod,
+            className: "block text-sm font-medium text-gray-700 mb-2",
+            children: loginMethod === "username" ? "Username" : "Email Address"
+          },
+          void 0,
+          false,
+          {
+            fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+            lineNumber: 173,
+            columnNumber: 11
+          },
+          this
+        ),
+        /* @__PURE__ */ jsxDEV("div", { className: "relative", children: [
+          getInputIcon(),
+          /* @__PURE__ */ jsxDEV(
+            "input",
+            {
+              type: loginMethod === "email" ? "email" : "text",
+              id: loginMethod,
+              name: loginMethod,
+              value: formData[loginMethod],
+              onChange: handleChange,
+              className: `w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors[loginMethod] ? "border-red-300 bg-red-50" : "border-gray-300 bg-white"}`,
+              placeholder: getInputPlaceholder(),
+              disabled: isLoading
+            },
+            void 0,
+            false,
+            {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+              lineNumber: 181,
+              columnNumber: 13
+            },
+            this
+          )
+        ] }, void 0, true, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+          lineNumber: 179,
+          columnNumber: 11
+        }, this),
+        errors[loginMethod] && /* @__PURE__ */ jsxDEV("p", { className: "mt-1 text-sm text-red-600", children: errors[loginMethod] }, void 0, false, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+          lineNumber: 197,
+          columnNumber: 11
+        }, this)
+      ] }, void 0, true, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+        lineNumber: 172,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV(
+        "button",
+        {
+          type: "submit",
+          disabled: isLoading,
+          className: "w-full bg-gradient-to-r from-green-500 to-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-green-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center",
+          children: isLoading ? /* @__PURE__ */ jsxDEV(Fragment, { children: [
+            /* @__PURE__ */ jsxDEV(Loader2, { className: "w-5 h-5 mr-2 animate-spin" }, void 0, false, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+              lineNumber: 209,
+              columnNumber: 15
+            }, this),
+            "Signing In..."
+          ] }, void 0, true, {
+            fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+            lineNumber: 208,
+            columnNumber: 11
+          }, this) : /* @__PURE__ */ jsxDEV(Fragment, { children: [
+            /* @__PURE__ */ jsxDEV(LogIn, { className: "w-5 h-5 mr-2" }, void 0, false, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+              lineNumber: 214,
+              columnNumber: 15
+            }, this),
+            "Sign In"
+          ] }, void 0, true, {
+            fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+            lineNumber: 213,
+            columnNumber: 11
+          }, this)
+        },
+        void 0,
+        false,
+        {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+          lineNumber: 202,
+          columnNumber: 9
+        },
+        this
+      )
+    ] }, void 0, true, {
+      fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+      lineNumber: 133,
+      columnNumber: 7
+    }, this)
+  ] }, void 0, true, {
+    fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx",
+    lineNumber: 124,
+    columnNumber: 5
+  }, this);
+}
+_s(LoginForm, "2Psx24FUDwPzRr4cH4IS+pUegz8=");
+_c = LoginForm;
+var _c;
+$RefreshReg$(_c, "LoginForm");
+if (import.meta.hot && !inWebWorker) {
+  window.$RefreshReg$ = prevRefreshReg;
+  window.$RefreshSig$ = prevRefreshSig;
+}
+if (import.meta.hot && !inWebWorker) {
+  RefreshRuntime.__hmr_import(import.meta.url).then((currentExports) => {
+    RefreshRuntime.registerExportsForReactRefresh("C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx", currentExports);
+    import.meta.hot.accept((nextExports) => {
+      if (!nextExports) return;
+      const invalidateMessage = RefreshRuntime.validateRefreshBoundaryAndEnqueueUpdate("C:/Users/משתמש/Desktop/mineMincraft/client/src/components/LoginForm.tsx", currentExports, nextExports);
+      if (invalidateMessage) import.meta.hot.invalidate(invalidateMessage);
+    });
+  });
+}
+
+//# sourceMappingURL=data:application/json;base64,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QUFBQSxVQVlzQjtBQUFBLGFBZHhCO0FBQUE7QUFBQTtBQUFBO0FBQUEsZUFnQkE7QUFBQSxRQUNDRixPQUFPTixXQUFXLEtBQ2pCLHVCQUFDLE9BQUUsV0FBVSw2QkFBNkJNLGlCQUFPTixXQUFXLEtBQTVEO0FBQUE7QUFBQTtBQUFBO0FBQUEsZUFBOEQ7QUFBQSxXQXpCbEU7QUFBQTtBQUFBO0FBQUE7QUFBQSxhQTJCQTtBQUFBLE1BR0E7QUFBQSxRQUFDO0FBQUE7QUFBQSxVQUNDLE1BQUs7QUFBQSxVQUNMLFVBQVVRO0FBQUFBLFVBQ1YsV0FBVTtBQUFBLFVBRVRBLHNCQUNDLG1DQUNFO0FBQUEsbUNBQUMsV0FBUSxXQUFVLCtCQUFuQjtBQUFBO0FBQUE7QUFBQTtBQUFBLG1CQUE4QztBQUFBLFlBQUc7QUFBQSxlQURuRDtBQUFBO0FBQUE7QUFBQTtBQUFBLGlCQUdBLElBRUEsbUNBQ0U7QUFBQSxtQ0FBQyxTQUFNLFdBQVUsa0JBQWpCO0FBQUE7QUFBQTtBQUFBO0FBQUEsbUJBQStCO0FBQUEsWUFBRztBQUFBLGVBRHBDO0FBQUE7QUFBQTtBQUFBO0FBQUEsaUJBR0E7QUFBQTtBQUFBLFFBZEo7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBLE1BZ0JBO0FBQUEsU0FyRkY7QUFBQTtBQUFBO0FBQUE7QUFBQSxXQXNGQTtBQUFBLE9BL0ZGO0FBQUE7QUFBQTtBQUFBO0FBQUEsU0FnR0E7QUFFSjtBQUFDVCxHQTdMdUJILFdBQVM7QUFBQTRDLEtBQVQ1QztBQUFTLElBQUE0QztBQUFBQyxhQUFBRCxJQUFBIiwibmFtZXMiOlsidXNlU3RhdGUiLCJMb2dJbiIsIk1haWwiLCJVc2VyIiwiTG9hZGVyMiIsImF1dGhBcGkiLCJBcGlFcnJvciIsImF1dGhTdG9yYWdlIiwiTG9naW5Gb3JtIiwib25TdWNjZXNzIiwib25Eb25lIiwiX3MiLCJsb2dpbk1ldGhvZCIsInNldExvZ2luTWV0aG9kIiwiZm9ybURhdGEiLCJzZXRGb3JtRGF0YSIsInVzZXJuYW1lIiwiZW1haWwiLCJlcnJvcnMiLCJzZXRFcnJvcnMiLCJpc0xvYWRpbmciLCJzZXRJc0xvYWRpbmciLCJ2YWxpZGF0ZUZvcm0iLCJuZXdFcnJvcnMiLCJ0cmltIiwidGVzdCIsIk9iamVjdCIsImtleXMiLCJsZW5ndGgiLCJoYW5kbGVTdWJtaXQiLCJlIiwicHJldmVudERlZmF1bHQiLCJsb2dpbkRhdGEiLCJyZXNwb25zZSIsImxvZ2luIiwidG9rZW4iLCJzZXRUb2tlbiIsInNldFVzZXIiLCJ1c2VyIiwiZXJyb3IiLCJtZXNzYWdlIiwiaW5jbHVkZXMiLCJnZW5lcmFsIiwiaGFuZGxlQ2hhbmdlIiwibmFtZSIsInZhbHVlIiwidGFyZ2V0IiwicHJldiIsImhhbmRsZU1ldGhvZENoYW5nZSIsIm1ldGhvZCIsImdldElucHV0SWNvbiIsImdldElucHV0UGxhY2Vob2xkZXIiLCJfYyIsIiRSZWZyZXNoUmVnJCJdLCJpZ25vcmVMaXN0IjpbXSwic291cmNlcyI6WyJMb2dpbkZvcm0udHN4Il0sInNvdXJjZXNDb250ZW50IjpbImltcG9ydCBSZWFjdCwgeyB1c2VTdGF0ZSB9IGZyb20gXCJyZWFjdFwiO1xyXG5pbXBvcnQgeyBMb2dJbiwgTWFpbCwgVXNlciwgTG9hZGVyMiB9IGZyb20gXCJsdWNpZGUtcmVhY3RcIjtcclxuaW1wb3J0IHsgYXV0aEFwaSwgQXBpRXJyb3IgfSBmcm9tIFwiLi4vdXRpbHMvYXBpXCI7XHJcbmltcG9ydCB7IGF1dGhTdG9yYWdlIH0gZnJvbSBcIi4uL3V0aWxzL2F1dGhcIjtcclxuaW1wb3J0IHsgTG9naW5SZXF1ZXN0IH0gZnJvbSBcIi4uL3R5cGVzL2F1dGhcIjtcclxuXHJcbmludGVyZmFjZSBMb2dpbkZvcm1Qcm9wcyB7XHJcbiAgb25TdWNjZXNzPzogKHVzZXI6IGFueSwgdG9rZW46IHN0cmluZykgPT4gdm9pZDtcclxuICBvbkRvbmU/OiAoKSA9PiB2b2lkO1xyXG59XHJcblxyXG50eXBlIExvZ2luTWV0aG9kID0gXCJ1c2VybmFtZVwiIHwgXCJlbWFpbFwiO1xyXG5cclxuZXhwb3J0IGRlZmF1bHQgZnVuY3Rpb24gTG9naW5Gb3JtKHsgb25TdWNjZXNzLCBvbkRvbmUgfTogTG9naW5Gb3JtUHJvcHMpIHtcclxuICBjb25zdCBbbG9naW5NZXRob2QsIHNldExvZ2luTWV0aG9kXSA9IHVzZVN0YXRlPExvZ2luTWV0aG9kPihcInVzZXJuYW1lXCIpO1xyXG4gIGNvbnN0IFtmb3JtRGF0YSwgc2V0Rm9ybURhdGFdID0gdXNlU3RhdGUoeyB1c2VybmFtZTogXCJcIiwgZW1haWw6IFwiXCIgfSk7XHJcbiAgY29uc3QgW2Vycm9ycywgc2V0RXJyb3JzXSA9IHVzZVN0YXRlPFJlY29yZDxzdHJpbmcsIHN0cmluZz4+KHt9KTtcclxuICBjb25zdCBbaXNMb2FkaW5nLCBzZXRJc0xvYWRpbmddID0gdXNlU3RhdGUoZmFsc2UpO1xyXG5cclxuICAvL1ZcclxuICBjb25zdCB2YWxpZGF0ZUZvcm0gPSAoKTogYm9vbGVhbiA9PiB7XHJcbiAgICBjb25zdCBuZXdFcnJvcnM6IFJlY29yZDxzdHJpbmcsIHN0cmluZz4gPSB7fTtcclxuXHJcbiAgICBpZiAobG9naW5NZXRob2QgPT09IFwidXNlcm5hbWVcIikge1xyXG4gICAgICBpZiAoIWZvcm1EYXRhLnVzZXJuYW1lLnRyaW0oKSkge1xyXG4gICAgICAgIG5ld0Vycm9ycy51c2VybmFtZSA9IFwiVXNlcm5hbWUgaXMgcmVxdWlyZWRcIjtcclxuICAgICAgfVxyXG4gICAgfSBlbHNlIHtcclxuICAgICAgaWYgKCFmb3JtRGF0YS5lbWFpbC50cmltKCkpIHtcclxuICAgICAgICBuZXdFcnJvcnMuZW1haWwgPSBcIkVtYWlsIGlzIHJlcXVpcmVkXCI7XHJcbiAgICAgIH0gZWxzZSBpZiAoIS9cXFMrQFxcUytcXC5cXFMrLy50ZXN0KGZvcm1EYXRhLmVtYWlsKSkge1xyXG4gICAgICAgIG5ld0Vycm9ycy5lbWFpbCA9IFwiUGxlYXNlIGVudGVyIGEgdmFsaWQgZW1haWwgYWRkcmVzc1wiO1xyXG4gICAgICB9XHJcbiAgICB9XHJcblxyXG4gICAgc2V0RXJyb3JzKG5ld0Vycm9ycyk7XHJcbiAgICByZXR1cm4gT2JqZWN0LmtleXMobmV3RXJyb3JzKS5sZW5ndGggPT09IDA7XHJcbiAgfTtcclxuXHJcbiAgY29uc3QgaGFuZGxlU3VibWl0ID0gYXN5bmMgKGU6IFJlYWN0LkZvcm1FdmVudCkgPT4ge1xyXG4gICAgZS5wcmV2ZW50RGVmYXVsdCgpO1xyXG4gICAgaWYgKCF2YWxpZGF0ZUZvcm0oKSkgcmV0dXJuO1xyXG5cclxuICAgIHNldElzTG9hZGluZyh0cnVlKTtcclxuICAgIHNldEVycm9ycyh7fSk7XHJcblxyXG4gICAgdHJ5IHtcclxuICAgICAgY29uc3QgbG9naW5EYXRhOiBMb2dpblJlcXVlc3QgPVxyXG4gICAgICAgIGxvZ2luTWV0aG9kID09PSBcInVzZXJuYW1lXCJcclxuICAgICAgICAgID8geyB1c2VybmFtZTogZm9ybURhdGEudXNlcm5hbWUgfVxyXG4gICAgICAgICAgOiB7IGVtYWlsOiBmb3JtRGF0YS5lbWFpbCB9O1xyXG5cclxuICAgICAgLy9pbiB0aGUgbG9naW4gZnVuY2lvbiBteSBwcm9ncmFtIGJsb2NrXHJcbiAgICAgIGNvbnN0IHJlc3BvbnNlID0gYXdhaXQgYXV0aEFwaS5sb2dpbihsb2dpbkRhdGEpO1xyXG5cclxuICAgICAgaWYgKHJlc3BvbnNlLnRva2VuKSB7XHJcbiAgICAgICAgLy8gc2F2ZSB0byBzdG9yYWdlXHJcbiAgICAgICAgYXV0aFN0b3JhZ2Uuc2V0VG9rZW4ocmVzcG9uc2UudG9rZW4pO1xyXG4gICAgICAgIGF1dGhTdG9yYWdlLnNldFVzZXIocmVzcG9uc2UudXNlcik7XHJcblxyXG4gICAgICAgIC8vIHRyaWdnZXIgY2FsbGJhY2tzXHJcbiAgICAgICAgb25TdWNjZXNzPy4ocmVzcG9uc2UudXNlciwgcmVzcG9uc2UudG9rZW4pO1xyXG4gICAgICAgIG9uRG9uZT8uKCk7XHJcbiAgICAgIH1cclxuICAgIH0gY2F0Y2ggKGVycm9yKSB7XHJcbiAgICAgIGlmIChlcnJvciBpbnN0YW5jZW9mIEFwaUVycm9yKSB7XHJcbiAgICAgICAgaWYgKGVycm9yLm1lc3NhZ2UuaW5jbHVkZXMoXCJ1c2VyX25vdF9mb3VuZFwiKSkge1xyXG4gICAgICAgICAgc2V0RXJyb3JzKHtcclxuICAgICAgICAgICAgZ2VuZXJhbDogXCJVc2VyIG5vdCBmb3VuZC4gUGxlYXNlIGNoZWNrIHlvdXIgY3JlZGVudGlhbHMuXCIsXHJcbiAgICAgICAgICB9KTtcclxuICAgICAgICB9IGVsc2Uge1xyXG4gICAgICAgICAgc2V0RXJyb3JzKHsgZ2VuZXJhbDogZXJyb3IubWVzc2FnZSB9KTtcclxuICAgICAgICB9XHJcbiAgICAgIH0gZWxzZSB7XHJcbiAgICAgICAgc2V0RXJyb3JzKHsgZ2VuZXJhbDogXCJMb2dpbiBmYWlsZWQuIFBsZWFzZSB0cnkgYWdhaW4uXCIgfSk7XHJcbiAgICAgIH1cclxuICAgIH0gZmluYWxseSB7XHJcbiAgICAgIHNldElzTG9hZGluZyhmYWxzZSk7XHJcbiAgICB9XHJcbiAgfTtcclxuXHJcbiAgY29uc3QgaGFuZGxlQ2hhbmdlID0gKGU6IFJlYWN0LkNoYW5nZUV2ZW50PEhUTUxJbnB1dEVsZW1lbnQ+KSA9PiB7XHJcbiAgICBjb25zdCB7IG5hbWUsIHZhbHVlIH0gPSBlLnRhcmdldDtcclxuICAgIHNldEZvcm1EYXRhKChwcmV2KSA9PiAoeyAuLi5wcmV2LCBbbmFtZV06IHZhbHVlIH0pKTtcclxuICAgIGlmIChlcnJvcnNbbmFtZV0pIHNldEVycm9ycygocHJldikgPT4gKHsgLi4ucHJldiwgW25hbWVdOiBcIlwiIH0pKTtcclxuICB9O1xyXG5cclxuICBjb25zdCBoYW5kbGVNZXRob2RDaGFuZ2UgPSAobWV0aG9kOiBMb2dpbk1ldGhvZCkgPT4ge1xyXG4gICAgc2V0TG9naW5NZXRob2QobWV0aG9kKTtcclxuICAgIHNldEZvcm1EYXRhKHsgdXNlcm5hbWU6IFwiXCIsIGVtYWlsOiBcIlwiIH0pO1xyXG4gICAgc2V0RXJyb3JzKHt9KTtcclxuICB9O1xyXG5cclxuICBjb25zdCBnZXRJbnB1dEljb24gPSAoKSA9PlxyXG4gICAgbG9naW5NZXRob2QgPT09IFwidXNlcm5hbWVcIiA/IChcclxuICAgICAgPFVzZXIgY2xhc3NOYW1lPVwiYWJzb2x1dGUgbGVmdC0zIHRvcC0xLzIgLXRyYW5zbGF0ZS15LTEvMiB0ZXh0LWdyYXktNDAwIHctNSBoLTVcIiAvPlxyXG4gICAgKSA6IChcclxuICAgICAgPE1haWwgY2xhc3NOYW1lPVwiYWJzb2x1dGUgbGVmdC0zIHRvcC0xLzIgLXRyYW5zbGF0ZS15LTEvMiB0ZXh0LWdyYXktNDAwIHctNSBoLTVcIiAvPlxyXG4gICAgKTtcclxuXHJcbiAgY29uc3QgZ2V0SW5wdXRQbGFjZWhvbGRlciA9ICgpID0+XHJcbiAgICBsb2dpbk1ldGhvZCA9PT0gXCJ1c2VybmFtZVwiID8gXCJFbnRlciB5b3VyIHVzZXJuYW1lXCIgOiBcIkVudGVyIHlvdXIgZW1haWxcIjtcclxuXHJcbiAgcmV0dXJuIChcclxuICAgIDxkaXYgY2xhc3NOYW1lPVwidy1mdWxsIG1heC13LW1kXCI+XHJcbiAgICAgIDxkaXYgY2xhc3NOYW1lPVwidGV4dC1jZW50ZXIgbWItOFwiPlxyXG4gICAgICAgIDxkaXYgY2xhc3NOYW1lPVwiaW5saW5lLWZsZXggaXRlbXMtY2VudGVyIGp1c3RpZnktY2VudGVyIHctMTYgaC0xNiBiZy1ncmFkaWVudC10by1iciBmcm9tLWdyZWVuLTUwMCB0by1ibHVlLTYwMCByb3VuZGVkLWZ1bGwgbWItNFwiPlxyXG4gICAgICAgICAgPExvZ0luIGNsYXNzTmFtZT1cInctOCBoLTggdGV4dC13aGl0ZVwiIC8+XHJcbiAgICAgICAgPC9kaXY+XHJcbiAgICAgICAgPGgyIGNsYXNzTmFtZT1cInRleHQtM3hsIGZvbnQtYm9sZCB0ZXh0LWdyYXktODAwIG1iLTJcIj5XZWxjb21lIEJhY2s8L2gyPlxyXG4gICAgICAgIDxwIGNsYXNzTmFtZT1cInRleHQtZ3JheS02MDBcIj5TaWduIGluIHRvIHlvdXIgYWNjb3VudDwvcD5cclxuICAgICAgPC9kaXY+XHJcblxyXG4gICAgICA8Zm9ybSBvblN1Ym1pdD17aGFuZGxlU3VibWl0fSBjbGFzc05hbWU9XCJzcGFjZS15LTZcIj5cclxuICAgICAgICB7ZXJyb3JzLmdlbmVyYWwgJiYgKFxyXG4gICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJiZy1yZWQtNTAgYm9yZGVyIGJvcmRlci1yZWQtMjAwIHRleHQtcmVkLTYwMCBweC00IHB5LTMgcm91bmRlZC1sZyB0ZXh0LXNtXCI+XHJcbiAgICAgICAgICAgIHtlcnJvcnMuZ2VuZXJhbH1cclxuICAgICAgICAgIDwvZGl2PlxyXG4gICAgICAgICl9XHJcblxyXG4gICAgICAgIHsvKiBNZXRob2QgU2VsZWN0b3IgKi99XHJcbiAgICAgICAgPGRpdj5cclxuICAgICAgICAgIDxsYWJlbCBjbGFzc05hbWU9XCJibG9jayB0ZXh0LXNtIGZvbnQtbWVkaXVtIHRleHQtZ3JheS03MDAgbWItM1wiPlxyXG4gICAgICAgICAgICBMb2dpbiBNZXRob2RcclxuICAgICAgICAgIDwvbGFiZWw+XHJcbiAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cImdyaWQgZ3JpZC1jb2xzLTIgZ2FwLTJcIj5cclxuICAgICAgICAgICAgPGJ1dHRvblxyXG4gICAgICAgICAgICAgIHR5cGU9XCJidXR0b25cIlxyXG4gICAgICAgICAgICAgIG9uQ2xpY2s9eygpID0+IGhhbmRsZU1ldGhvZENoYW5nZShcInVzZXJuYW1lXCIpfVxyXG4gICAgICAgICAgICAgIGNsYXNzTmFtZT17YGZsZXgtMSBweS0yIHB4LTMgcm91bmRlZC1sZyB0ZXh0LXNtIGZvbnQtbWVkaXVtIHRyYW5zaXRpb24tY29sb3JzICR7XHJcbiAgICAgICAgICAgICAgICBsb2dpbk1ldGhvZCA9PT0gXCJ1c2VybmFtZVwiXHJcbiAgICAgICAgICAgICAgICAgID8gXCJiZy1ibHVlLTEwMCB0ZXh0LWJsdWUtNzAwIGJvcmRlciBib3JkZXItYmx1ZS0zMDBcIlxyXG4gICAgICAgICAgICAgICAgICA6IFwiYmctZ3JheS0xMDAgdGV4dC1ncmF5LTcwMCBob3ZlcjpiZy1ncmF5LTIwMFwiXHJcbiAgICAgICAgICAgICAgfWB9XHJcbiAgICAgICAgICAgID5cclxuICAgICAgICAgICAgICBVc2VybmFtZVxyXG4gICAgICAgICAgICA8L2J1dHRvbj5cclxuICAgICAgICAgICAgPGJ1dHRvblxyXG4gICAgICAgICAgICAgIHR5cGU9XCJidXR0b25cIlxyXG4gICAgICAgICAgICAgIG9uQ2xpY2s9eygpID0+IGhhbmRsZU1ldGhvZENoYW5nZShcImVtYWlsXCIpfVxyXG4gICAgICAgICAgICAgIGNsYXNzTmFtZT17YGZsZXgtMSBweS0yIHB4LTMgcm91bmRlZC1sZyB0ZXh0LXNtIGZvbnQtbWVkaXVtIHRyYW5zaXRpb24tY29sb3JzICR7XHJcbiAgICAgICAgICAgICAgICBsb2dpbk1ldGhvZCA9PT0gXCJlbWFpbFwiXHJcbiAgICAgICAgICAgICAgICAgID8gXCJiZy1ibHVlLTEwMCB0ZXh0LWJsdWUtNzAwIGJvcmRlciBib3JkZXItYmx1ZS0zMDBcIlxyXG4gICAgICAgICAgICAgICAgICA6IFwiYmctZ3JheS0xMDAgdGV4dC1ncmF5LTcwMCBob3ZlcjpiZy1ncmF5LTIwMFwiXHJcbiAgICAgICAgICAgICAgfWB9XHJcbiAgICAgICAgICAgID5cclxuICAgICAgICAgICAgICBFbWFpbFxyXG4gICAgICAgICAgICA8L2J1dHRvbj5cclxuICAgICAgICAgIDwvZGl2PlxyXG4gICAgICAgIDwvZGl2PlxyXG5cclxuICAgICAgICB7LyogSW5wdXQgKi99XHJcbiAgICAgICAgPGRpdj5cclxuICAgICAgICAgIDxsYWJlbFxyXG4gICAgICAgICAgICBodG1sRm9yPXtsb2dpbk1ldGhvZH1cclxuICAgICAgICAgICAgY2xhc3NOYW1lPVwiYmxvY2sgdGV4dC1zbSBmb250LW1lZGl1bSB0ZXh0LWdyYXktNzAwIG1iLTJcIlxyXG4gICAgICAgICAgPlxyXG4gICAgICAgICAgICB7bG9naW5NZXRob2QgPT09IFwidXNlcm5hbWVcIiA/IFwiVXNlcm5hbWVcIiA6IFwiRW1haWwgQWRkcmVzc1wifVxyXG4gICAgICAgICAgPC9sYWJlbD5cclxuICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwicmVsYXRpdmVcIj5cclxuICAgICAgICAgICAge2dldElucHV0SWNvbigpfVxyXG4gICAgICAgICAgICA8aW5wdXRcclxuICAgICAgICAgICAgICB0eXBlPXtsb2dpbk1ldGhvZCA9PT0gXCJlbWFpbFwiID8gXCJlbWFpbFwiIDogXCJ0ZXh0XCJ9XHJcbiAgICAgICAgICAgICAgaWQ9e2xvZ2luTWV0aG9kfVxyXG4gICAgICAgICAgICAgIG5hbWU9e2xvZ2luTWV0aG9kfVxyXG4gICAgICAgICAgICAgIHZhbHVlPXtmb3JtRGF0YVtsb2dpbk1ldGhvZF19XHJcbiAgICAgICAgICAgICAgb25DaGFuZ2U9e2hhbmRsZUNoYW5nZX1cclxuICAgICAgICAgICAgICBjbGFzc05hbWU9e2B3LWZ1bGwgcGwtMTAgcHItNCBweS0zIGJvcmRlciByb3VuZGVkLWxnIGZvY3VzOnJpbmctMiBmb2N1czpyaW5nLWJsdWUtNTAwIGZvY3VzOmJvcmRlci1ibHVlLTUwMCB0cmFuc2l0aW9uLWNvbG9ycyAke1xyXG4gICAgICAgICAgICAgICAgZXJyb3JzW2xvZ2luTWV0aG9kXVxyXG4gICAgICAgICAgICAgICAgICA/IFwiYm9yZGVyLXJlZC0zMDAgYmctcmVkLTUwXCJcclxuICAgICAgICAgICAgICAgICAgOiBcImJvcmRlci1ncmF5LTMwMCBiZy13aGl0ZVwiXHJcbiAgICAgICAgICAgICAgfWB9XHJcbiAgICAgICAgICAgICAgcGxhY2Vob2xkZXI9e2dldElucHV0UGxhY2Vob2xkZXIoKX1cclxuICAgICAgICAgICAgICBkaXNhYmxlZD17aXNMb2FkaW5nfVxyXG4gICAgICAgICAgICAvPlxyXG4gICAgICAgICAgPC9kaXY+XHJcbiAgICAgICAgICB7ZXJyb3JzW2xvZ2luTWV0aG9kXSAmJiAoXHJcbiAgICAgICAgICAgIDxwIGNsYXNzTmFtZT1cIm10LTEgdGV4dC1zbSB0ZXh0LXJlZC02MDBcIj57ZXJyb3JzW2xvZ2luTWV0aG9kXX08L3A+XHJcbiAgICAgICAgICApfVxyXG4gICAgICAgIDwvZGl2PlxyXG5cclxuICAgICAgICB7LyogU3VibWl0ICovfVxyXG4gICAgICAgIDxidXR0b25cclxuICAgICAgICAgIHR5cGU9XCJzdWJtaXRcIlxyXG4gICAgICAgICAgZGlzYWJsZWQ9e2lzTG9hZGluZ31cclxuICAgICAgICAgIGNsYXNzTmFtZT1cInctZnVsbCBiZy1ncmFkaWVudC10by1yIGZyb20tZ3JlZW4tNTAwIHRvLWJsdWUtNjAwIHRleHQtd2hpdGUgZm9udC1zZW1pYm9sZCBweS0zIHB4LTQgcm91bmRlZC1sZyBob3Zlcjpmcm9tLWdyZWVuLTYwMCBob3Zlcjp0by1ibHVlLTcwMCBmb2N1czpvdXRsaW5lLW5vbmUgZm9jdXM6cmluZy0yIGZvY3VzOnJpbmctZ3JlZW4tNTAwIGZvY3VzOnJpbmctb2Zmc2V0LTIgdHJhbnNpdGlvbi1hbGwgZHVyYXRpb24tMjAwIGRpc2FibGVkOm9wYWNpdHktNTAgZGlzYWJsZWQ6Y3Vyc29yLW5vdC1hbGxvd2VkIGZsZXggaXRlbXMtY2VudGVyIGp1c3RpZnktY2VudGVyXCJcclxuICAgICAgICA+XHJcbiAgICAgICAgICB7aXNMb2FkaW5nID8gKFxyXG4gICAgICAgICAgICA8PlxyXG4gICAgICAgICAgICAgIDxMb2FkZXIyIGNsYXNzTmFtZT1cInctNSBoLTUgbXItMiBhbmltYXRlLXNwaW5cIiAvPlxyXG4gICAgICAgICAgICAgIFNpZ25pbmcgSW4uLi5cclxuICAgICAgICAgICAgPC8+XHJcbiAgICAgICAgICApIDogKFxyXG4gICAgICAgICAgICA8PlxyXG4gICAgICAgICAgICAgIDxMb2dJbiBjbGFzc05hbWU9XCJ3LTUgaC01IG1yLTJcIiAvPlxyXG4gICAgICAgICAgICAgIFNpZ24gSW5cclxuICAgICAgICAgICAgPC8+XHJcbiAgICAgICAgICApfVxyXG4gICAgICAgIDwvYnV0dG9uPlxyXG4gICAgICA8L2Zvcm0+XHJcbiAgICA8L2Rpdj5cclxuICApO1xyXG59XHJcbiJdLCJmaWxlIjoiQzovVXNlcnMv157Xqdeq157XqS9EZXNrdG9wL21pbmVNaW5jcmFmdC9jbGllbnQvc3JjL2NvbXBvbmVudHMvTG9naW5Gb3JtLnRzeCJ9

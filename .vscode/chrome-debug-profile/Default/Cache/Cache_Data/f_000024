@@ -1,0 +1,515 @@
+import { createHotContext as __vite__createHotContext } from "/@vite/client";import.meta.hot = __vite__createHotContext("/src/components/VoxelGrid.tsx");import.meta.env = {"BASE_URL": "/", "DEV": true, "MODE": "development", "PROD": false, "SSR": false, "VITE_API_BASE": "http://localhost:8080", "VITE_GAME_WS": "ws://localhost:8080/game/ws"};import __vite__cjsImport0_react_jsxDevRuntime from "/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=9f0b1529"; const jsxDEV = __vite__cjsImport0_react_jsxDevRuntime["jsxDEV"];
+import * as RefreshRuntime from "/@react-refresh";
+const inWebWorker = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope;
+let prevRefreshReg;
+let prevRefreshSig;
+if (import.meta.hot && !inWebWorker) {
+  if (!window.$RefreshReg$) {
+    throw new Error(
+      "@vitejs/plugin-react can't detect preamble. Something is wrong."
+    );
+  }
+  prevRefreshReg = window.$RefreshReg$;
+  prevRefreshSig = window.$RefreshSig$;
+  window.$RefreshReg$ = RefreshRuntime.getRefreshReg("C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx");
+  window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
+}
+var _s = $RefreshSig$();
+import __vite__cjsImport3_react from "/node_modules/.vite/deps/react.js?v=9f0b1529"; const useEffect = __vite__cjsImport3_react["useEffect"]; const useState = __vite__cjsImport3_react["useState"]; const useCallback = __vite__cjsImport3_react["useCallback"]; const useRef = __vite__cjsImport3_react["useRef"];
+import { Wifi, WifiOff, Users, Gamepad2, Palette } from "/node_modules/lucide-react/dist/esm/lucide-react.js?v=9f0b1529";
+import { authStorage } from "/src/utils/auth.ts";
+const ENV_WS = import.meta.env?.VITE_GAME_WS;
+const VoxelGrid = ({ serverUrl }) => {
+  _s();
+  const [gameState, setGameState] = useState(null);
+  const [connected, setConnected] = useState(false);
+  const [playerCount, setPlayerCount] = useState(0);
+  const [lastAction, setLastAction] = useState("");
+  const wsRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const reconnectingRef = useRef(false);
+  const getWebSocketUrl = useCallback(() => {
+    if (serverUrl && serverUrl.startsWith("ws")) return serverUrl;
+    if (ENV_WS && ENV_WS.startsWith("ws")) return ENV_WS;
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${proto}//${window.location.hostname}:8080/game/ws`;
+  }, [serverUrl]);
+  const connectWebSocket = useCallback(() => {
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+    try {
+      const base = getWebSocketUrl();
+      const token = authStorage.getToken?.();
+      const url = token ? `${base}?token=${encodeURIComponent(token)}` : base;
+      console.log("[WS URL]", url, "token?", Boolean(token));
+      const ws = new WebSocket(url);
+      wsRef.current = ws;
+      ws.onopen = () => {
+        setConnected(true);
+      };
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log("data --", data);
+          if (data.type === "matrix") {
+            setGameState({
+              w: data.w,
+              h: data.h,
+              data: data.data,
+              chunk_id: data.chunk_id
+              // total_users:data.total_users
+            });
+            if (data.total_players != void 0) {
+              setPlayerCount(data.total_players);
+            }
+          }
+        } catch (err) {
+          console.error("WS parse error:", err);
+        }
+      };
+      ws.onclose = () => {
+        setConnected(false);
+        setGameState(null);
+        setPlayerCount(0);
+        if (!reconnectingRef.current) {
+          reconnectingRef.current = true;
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectingRef.current = false;
+            connectWebSocket();
+          }, 3e3);
+        }
+      };
+      ws.onerror = () => {
+        setConnected(false);
+      };
+    } catch (err) {
+      console.error("WS connect failed:", err);
+      setConnected(false);
+    }
+  }, [getWebSocketUrl]);
+  const sendMessage = useCallback((message) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(message));
+    }
+  }, []);
+  const handleKeyPress = useCallback(
+    (event) => {
+      if (!connected) return;
+      const key = event.key.toLowerCase();
+      let action = "";
+      switch (key) {
+        case "arrowup":
+        case "w":
+          sendMessage({ k: "up" });
+          action = "Moved Up";
+          break;
+        case "arrowdown":
+        case "s":
+          sendMessage({ k: "down" });
+          action = "Moved Down";
+          break;
+        case "arrowleft":
+        case "a":
+          sendMessage({ k: "left" });
+          action = "Moved Left";
+          break;
+        case "arrowright":
+        case "d":
+          sendMessage({ k: "right" });
+          action = "Moved Right";
+          break;
+        case "c":
+          sendMessage({ k: "c" });
+          action = "Color Changed";
+          break;
+      }
+      if (action) {
+        setLastAction(action);
+        window.setTimeout(() => setLastAction(""), 2e3);
+        event.preventDefault();
+      }
+    },
+    [connected, sendMessage]
+  );
+  useEffect(() => {
+    connectWebSocket();
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+      try {
+        wsRef.current?.close();
+        wsRef.current = null;
+      } catch {
+      }
+    };
+  }, [connectWebSocket]);
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [handleKeyPress]);
+  const renderGrid = () => {
+    if (!gameState) return null;
+    const cells = [];
+    for (let r = 0; r < gameState.h; r++) {
+      for (let c = 0; c < gameState.w; c++) {
+        const i = r * gameState.w + c;
+        const v = gameState.data[i];
+        const isPlayer = (v & 1) === 1;
+        const getBit = (x, bit) => x >> bit & 1;
+        const get2 = (x, b0, b1) => getBit(x, b1) << 1 | getBit(x, b0);
+        const r2 = get2(v, 2, 5);
+        const g2 = get2(v, 3, 6);
+        const b2 = get2(v, 4, 7);
+        const blank = !isPlayer && r2 === 0 && g2 === 0 && b2 === 0;
+        const map = [0, 85, 170, 255];
+        const color = `rgb(${map[r2]}, ${map[g2]}, ${map[b2]})`;
+        cells.push(
+          /* @__PURE__ */ jsxDEV(
+            "div",
+            {
+              className: `voxel-cell ${isPlayer ? "voxel-player" : "voxel-empty"}`,
+              style: {
+                backgroundColor: blank ? "transparent" : color,
+                outline: isPlayer ? "1px solid rgba(255,255,255,0.6)" : "none"
+              }
+            },
+            `${r}-${c}`,
+            false,
+            {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+              lineNumber: 213,
+              columnNumber: 11
+            },
+            this
+          )
+        );
+      }
+    }
+    return cells;
+  };
+  return /* @__PURE__ */ jsxDEV("div", { className: "min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white", children: /* @__PURE__ */ jsxDEV("div", { className: "container mx-auto px-4 py-8", children: [
+    /* @__PURE__ */ jsxDEV("div", { className: "text-center mb-8", children: [
+      /* @__PURE__ */ jsxDEV("h1", { className: "text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent", children: "Voxel World" }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+        lineNumber: 231,
+        columnNumber: 11
+      }, this),
+      /* @__PURE__ */ jsxDEV("p", { className: "text-slate-300 text-lg", children: "A multiplayer voxel playground where colors come alive" }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+        lineNumber: 234,
+        columnNumber: 11
+      }, this)
+    ] }, void 0, true, {
+      fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+      lineNumber: 230,
+      columnNumber: 9
+    }, this),
+    /* @__PURE__ */ jsxDEV("div", { className: "flex justify-center items-center gap-6 mb-8", children: [
+      /* @__PURE__ */ jsxDEV(
+        "div",
+        {
+          className: `flex items-center gap-2 px-4 py-2 rounded-full ${connected ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"}`,
+          children: [
+            connected ? /* @__PURE__ */ jsxDEV(Wifi, { size: 18 }, void 0, false, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+              lineNumber: 245,
+              columnNumber: 26
+            }, this) : /* @__PURE__ */ jsxDEV(WifiOff, { size: 18 }, void 0, false, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+              lineNumber: 245,
+              columnNumber: 47
+            }, this),
+            /* @__PURE__ */ jsxDEV("span", { className: "font-medium", children: connected ? "Connected" : "Connecting..." }, void 0, false, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+              lineNumber: 246,
+              columnNumber: 13
+            }, this)
+          ]
+        },
+        void 0,
+        true,
+        {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+          lineNumber: 240,
+          columnNumber: 11
+        },
+        this
+      ),
+      /* @__PURE__ */ jsxDEV("div", { className: "flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-300", children: [
+        /* @__PURE__ */ jsxDEV(Users, { size: 18 }, void 0, false, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+          lineNumber: 250,
+          columnNumber: 13
+        }, this),
+        /* @__PURE__ */ jsxDEV("span", { className: "font-medium", children: [
+          playerCount,
+          " Players"
+        ] }, void 0, true, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+          lineNumber: 251,
+          columnNumber: 13
+        }, this)
+      ] }, void 0, true, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+        lineNumber: 249,
+        columnNumber: 11
+      }, this),
+      lastAction && /* @__PURE__ */ jsxDEV("div", { className: "flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 text-purple-300 animate-pulse", children: [
+        /* @__PURE__ */ jsxDEV(Gamepad2, { size: 18 }, void 0, false, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+          lineNumber: 256,
+          columnNumber: 15
+        }, this),
+        /* @__PURE__ */ jsxDEV("span", { className: "font-medium", children: lastAction }, void 0, false, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+          lineNumber: 257,
+          columnNumber: 15
+        }, this)
+      ] }, void 0, true, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+        lineNumber: 255,
+        columnNumber: 11
+      }, this)
+    ] }, void 0, true, {
+      fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+      lineNumber: 239,
+      columnNumber: 9
+    }, this),
+    /* @__PURE__ */ jsxDEV("div", { className: "flex justify-center mb-8", children: gameState ? /* @__PURE__ */ jsxDEV(
+      "div",
+      {
+        className: "voxel-grid bg-slate-800/50 p-4 rounded-2xl backdrop-blur-sm border border-slate-700/50 shadow-2xl",
+        style: {
+          display: "grid",
+          gridTemplateColumns: `repeat(${gameState.w}, 1fr)`,
+          gap: "1px",
+          maxWidth: "800px",
+          aspectRatio: "1"
+        },
+        children: renderGrid()
+      },
+      void 0,
+      false,
+      {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+        lineNumber: 264,
+        columnNumber: 11
+      },
+      this
+    ) : /* @__PURE__ */ jsxDEV("div", { className: "flex items-center justify-center w-96 h-96 bg-slate-800/50 rounded-2xl backdrop-blur-sm border border-slate-700/50", children: /* @__PURE__ */ jsxDEV("div", { className: "text-center", children: [
+      /* @__PURE__ */ jsxDEV("div", { className: "animate-spin w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full mx-auto mb-4" }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+        lineNumber: 279,
+        columnNumber: 17
+      }, this),
+      /* @__PURE__ */ jsxDEV("p", { className: "text-slate-400", children: "Connecting to voxel world..." }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+        lineNumber: 280,
+        columnNumber: 17
+      }, this)
+    ] }, void 0, true, {
+      fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+      lineNumber: 278,
+      columnNumber: 15
+    }, this) }, void 0, false, {
+      fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+      lineNumber: 277,
+      columnNumber: 11
+    }, this) }, void 0, false, {
+      fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+      lineNumber: 262,
+      columnNumber: 9
+    }, this),
+    /* @__PURE__ */ jsxDEV("div", { className: "max-w-2xl mx-auto", children: [
+      /* @__PURE__ */ jsxDEV("h2", { className: "text-2xl font-semibold mb-6 text-center flex items-center justify-center gap-2", children: [
+        /* @__PURE__ */ jsxDEV(Gamepad2, { className: "text-purple-400" }, void 0, false, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+          lineNumber: 288,
+          columnNumber: 13
+        }, this),
+        "Controls"
+      ] }, void 0, true, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+        lineNumber: 287,
+        columnNumber: 11
+      }, this),
+      /* @__PURE__ */ jsxDEV("div", { className: "grid md:grid-cols-2 gap-6", children: [
+        /* @__PURE__ */ jsxDEV("div", { className: "bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50", children: [
+          /* @__PURE__ */ jsxDEV("h3", { className: "text-lg font-semibold mb-4 text-blue-300", children: "Movement" }, void 0, false, {
+            fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+            lineNumber: 294,
+            columnNumber: 15
+          }, this),
+          /* @__PURE__ */ jsxDEV("div", { className: "space-y-2 text-slate-300", children: [
+            /* @__PURE__ */ jsxDEV("p", { children: [
+              /* @__PURE__ */ jsxDEV("kbd", { className: "px-2 py-1 bg-slate-700 rounded text-xs", children: "↑" }, void 0, false, {
+                fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+                lineNumber: 296,
+                columnNumber: 20
+              }, this),
+              " ",
+              /* @__PURE__ */ jsxDEV("kbd", { className: "px-2 py-1 bg-slate-700 rounded text-xs", children: "W" }, void 0, false, {
+                fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+                lineNumber: 296,
+                columnNumber: 84
+              }, this),
+              " Move Up"
+            ] }, void 0, true, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+              lineNumber: 296,
+              columnNumber: 17
+            }, this),
+            /* @__PURE__ */ jsxDEV("p", { children: [
+              /* @__PURE__ */ jsxDEV("kbd", { className: "px-2 py-1 bg-slate-700 rounded text-xs", children: "↓" }, void 0, false, {
+                fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+                lineNumber: 297,
+                columnNumber: 20
+              }, this),
+              " ",
+              /* @__PURE__ */ jsxDEV("kbd", { className: "px-2 py-1 bg-slate-700 rounded text-xs", children: "S" }, void 0, false, {
+                fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+                lineNumber: 297,
+                columnNumber: 84
+              }, this),
+              " Move Down"
+            ] }, void 0, true, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+              lineNumber: 297,
+              columnNumber: 17
+            }, this),
+            /* @__PURE__ */ jsxDEV("p", { children: [
+              /* @__PURE__ */ jsxDEV("kbd", { className: "px-2 py-1 bg-slate-700 rounded text-xs", children: "←" }, void 0, false, {
+                fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+                lineNumber: 298,
+                columnNumber: 20
+              }, this),
+              " ",
+              /* @__PURE__ */ jsxDEV("kbd", { className: "px-2 py-1 bg-slate-700 rounded text-xs", children: "A" }, void 0, false, {
+                fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+                lineNumber: 298,
+                columnNumber: 84
+              }, this),
+              " Move Left"
+            ] }, void 0, true, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+              lineNumber: 298,
+              columnNumber: 17
+            }, this),
+            /* @__PURE__ */ jsxDEV("p", { children: [
+              /* @__PURE__ */ jsxDEV("kbd", { className: "px-2 py-1 bg-slate-700 rounded text-xs", children: "→" }, void 0, false, {
+                fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+                lineNumber: 299,
+                columnNumber: 20
+              }, this),
+              " ",
+              /* @__PURE__ */ jsxDEV("kbd", { className: "px-2 py-1 bg-slate-700 rounded text-xs", children: "D" }, void 0, false, {
+                fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+                lineNumber: 299,
+                columnNumber: 84
+              }, this),
+              " Move Right"
+            ] }, void 0, true, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+              lineNumber: 299,
+              columnNumber: 17
+            }, this)
+          ] }, void 0, true, {
+            fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+            lineNumber: 295,
+            columnNumber: 15
+          }, this)
+        ] }, void 0, true, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+          lineNumber: 293,
+          columnNumber: 13
+        }, this),
+        /* @__PURE__ */ jsxDEV("div", { className: "bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50", children: [
+          /* @__PURE__ */ jsxDEV("h3", { className: "text-lg font-semibold mb-4 text-purple-300 flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxDEV(Palette, { size: 18 }, void 0, false, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+              lineNumber: 305,
+              columnNumber: 17
+            }, this),
+            "Colors"
+          ] }, void 0, true, {
+            fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+            lineNumber: 304,
+            columnNumber: 15
+          }, this),
+          /* @__PURE__ */ jsxDEV("div", { className: "space-y-2 text-slate-300", children: [
+            /* @__PURE__ */ jsxDEV("p", { children: [
+              /* @__PURE__ */ jsxDEV("kbd", { className: "px-2 py-1 bg-slate-700 rounded text-xs", children: "C" }, void 0, false, {
+                fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+                lineNumber: 309,
+                columnNumber: 20
+              }, this),
+              " Cycle Color"
+            ] }, void 0, true, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+              lineNumber: 309,
+              columnNumber: 17
+            }, this),
+            /* @__PURE__ */ jsxDEV("p", { className: "text-sm text-slate-400 mt-2", children: "Press C to cycle through 64 different color combinations" }, void 0, false, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+              lineNumber: 310,
+              columnNumber: 17
+            }, this)
+          ] }, void 0, true, {
+            fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+            lineNumber: 308,
+            columnNumber: 15
+          }, this)
+        ] }, void 0, true, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+          lineNumber: 303,
+          columnNumber: 13
+        }, this)
+      ] }, void 0, true, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+        lineNumber: 292,
+        columnNumber: 11
+      }, this)
+    ] }, void 0, true, {
+      fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+      lineNumber: 286,
+      columnNumber: 9
+    }, this),
+    /* @__PURE__ */ jsxDEV("div", { className: "text-center mt-12 text-slate-400" }, void 0, false, {
+      fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+      lineNumber: 316,
+      columnNumber: 9
+    }, this)
+  ] }, void 0, true, {
+    fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+    lineNumber: 229,
+    columnNumber: 7
+  }, this) }, void 0, false, {
+    fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx",
+    lineNumber: 228,
+    columnNumber: 5
+  }, this);
+};
+_s(VoxelGrid, "TgKJnlJDbmaadInnrESiduW9uqg=");
+_c = VoxelGrid;
+export default VoxelGrid;
+var _c;
+$RefreshReg$(_c, "VoxelGrid");
+if (import.meta.hot && !inWebWorker) {
+  window.$RefreshReg$ = prevRefreshReg;
+  window.$RefreshSig$ = prevRefreshSig;
+}
+if (import.meta.hot && !inWebWorker) {
+  RefreshRuntime.__hmr_import(import.meta.url).then((currentExports) => {
+    RefreshRuntime.registerExportsForReactRefresh("C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx", currentExports);
+    import.meta.hot.accept((nextExports) => {
+      if (!nextExports) return;
+      const invalidateMessage = RefreshRuntime.validateRefreshBoundaryAndEnqueueUpdate("C:/Users/משתמש/Desktop/mineMincraft/client/src/components/VoxelGrid.tsx", currentExports, nextExports);
+      if (invalidateMessage) import.meta.hot.invalidate(invalidateMessage);
+    });
+  });
+}
+
+//# sourceMappingURL=data:application/json;base64,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QUFBQTtBQUFBO0FBQUEsaUJBR0E7QUFBQSxVQUNBLHVCQUFDLFNBQUksV0FBVSw0QkFDYjtBQUFBLG1DQUFDLE9BQUU7QUFBQSxxQ0FBQyxTQUFJLFdBQVUsMENBQXlDLGlCQUF4RDtBQUFBO0FBQUE7QUFBQTtBQUFBLHFCQUF5RDtBQUFBLGNBQU07QUFBQSxpQkFBbEU7QUFBQTtBQUFBO0FBQUE7QUFBQSxtQkFBOEU7QUFBQSxZQUM5RSx1QkFBQyxPQUFFLFdBQVUsK0JBQThCLHdFQUEzQztBQUFBO0FBQUE7QUFBQTtBQUFBLG1CQUFtRztBQUFBLGVBRnJHO0FBQUE7QUFBQTtBQUFBO0FBQUEsaUJBR0E7QUFBQSxhQVJGO0FBQUE7QUFBQTtBQUFBO0FBQUEsZUFTQTtBQUFBLFdBcEJGO0FBQUE7QUFBQTtBQUFBO0FBQUEsYUFxQkE7QUFBQSxTQTNCRjtBQUFBO0FBQUE7QUFBQTtBQUFBLFdBNEJBO0FBQUEsSUFFQSx1QkFBQyxTQUFJLFdBQVUsc0NBQWY7QUFBQTtBQUFBO0FBQUE7QUFBQSxXQUFpRDtBQUFBLE9BdkZuRDtBQUFBO0FBQUE7QUFBQTtBQUFBLFNBd0ZBLEtBekZGO0FBQUE7QUFBQTtBQUFBO0FBQUEsU0EwRkE7QUFFSjtBQUFFakUsR0F6UklGLFdBQW1DO0FBQUE4RixLQUFuQzlGO0FBMlJOLGVBQWVBO0FBQVUsSUFBQThGO0FBQUFDLGFBQUFELElBQUEiLCJuYW1lcyI6WyJ1c2VFZmZlY3QiLCJ1c2VTdGF0ZSIsInVzZUNhbGxiYWNrIiwidXNlUmVmIiwiV2lmaSIsIldpZmlPZmYiLCJVc2VycyIsIkdhbWVwYWQyIiwiUGFsZXR0ZSIsImF1dGhTdG9yYWdlIiwiRU5WX1dTIiwiaW1wb3J0IiwiZW52IiwiVklURV9HQU1FX1dTIiwiVm94ZWxHcmlkIiwic2VydmVyVXJsIiwiX3MiLCJnYW1lU3RhdGUiLCJzZXRHYW1lU3RhdGUiLCJjb25uZWN0ZWQiLCJzZXRDb25uZWN0ZWQiLCJwbGF5ZXJDb3VudCIsInNldFBsYXllckNvdW50IiwibGFzdEFjdGlvbiIsInNldExhc3RBY3Rpb24iLCJ3c1JlZiIsInJlY29ubmVjdFRpbWVvdXRSZWYiLCJyZWNvbm5lY3RpbmdSZWYiLCJnZXRXZWJTb2NrZXRVcmwiLCJzdGFydHNXaXRoIiwicHJvdG8iLCJ3aW5kb3ciLCJsb2NhdGlvbiIsInByb3RvY29sIiwiaG9zdG5hbWUiLCJjb25uZWN0V2ViU29ja2V0IiwiY3VycmVudCIsInJlYWR5U3RhdGUiLCJXZWJTb2NrZXQiLCJPUEVOIiwiQ09OTkVDVElORyIsImJhc2UiLCJ0b2tlbiIsImdldFRva2VuIiwidXJsIiwiZW5jb2RlVVJJQ29tcG9uZW50IiwiY29uc29sZSIsImxvZyIsIkJvb2xlYW4iLCJ3cyIsIm9ub3BlbiIsIm9ubWVzc2FnZSIsImV2ZW50IiwiZGF0YSIsIkpTT04iLCJwYXJzZSIsInR5cGUiLCJ3IiwiaCIsImNodW5rX2lkIiwidG90YWxfcGxheWVycyIsInVuZGVmaW5lZCIsImVyciIsImVycm9yIiwib25jbG9zZSIsInNldFRpbWVvdXQiLCJvbmVycm9yIiwic2VuZE1lc3NhZ2UiLCJtZXNzYWdlIiwic2VuZCIsInN0cmluZ2lmeSIsImhhbmRsZUtleVByZXNzIiwia2V5IiwidG9Mb3dlckNhc2UiLCJhY3Rpb24iLCJrIiwicHJldmVudERlZmF1bHQiLCJjbGVhclRpbWVvdXQiLCJjbG9zZSIsImFkZEV2ZW50TGlzdGVuZXIiLCJyZW1vdmVFdmVudExpc3RlbmVyIiwicmVuZGVyR3JpZCIsImNlbGxzIiwiciIsImMiLCJpIiwidiIsImlzUGxheWVyIiwiZ2V0Qml0IiwieCIsImJpdCIsImdldDIiLCJiMCIsImIxIiwicjIiLCJnMiIsImIyIiwiYmxhbmsiLCJtYXAiLCJjb2xvciIsInB1c2giLCJiYWNrZ3JvdW5kQ29sb3IiLCJvdXRsaW5lIiwiZGlzcGxheSIsImdyaWRUZW1wbGF0ZUNvbHVtbnMiLCJnYXAiLCJtYXhXaWR0aCIsImFzcGVjdFJhdGlvIiwiX2MiLCIkUmVmcmVzaFJlZyQiXSwiaWdub3JlTGlzdCI6W10sInNvdXJjZXMiOlsiVm94ZWxHcmlkLnRzeCJdLCJzb3VyY2VzQ29udGVudCI6WyJpbXBvcnQgUmVhY3QsIHsgdXNlRWZmZWN0LCB1c2VTdGF0ZSwgdXNlQ2FsbGJhY2ssIHVzZVJlZiB9IGZyb20gXCJyZWFjdFwiO1xyXG5pbXBvcnQgeyBXaWZpLCBXaWZpT2ZmLCBVc2VycywgR2FtZXBhZDIsIFBhbGV0dGUgfSBmcm9tIFwibHVjaWRlLXJlYWN0XCI7XHJcbmltcG9ydCB7IGF1dGhTdG9yYWdlIH0gZnJvbSBcIi4uL3V0aWxzL2F1dGhcIjtcclxuXHJcbi8vINeg16fXqNeQINen15XXk9edINeb15wg154tVklURV9HQU1FX1dTOyDXkNedINeQ15nXnywg16DXmdek15XXnCDXnNeb16rXldeR16og157XlC1FZGdlINeR15DXldeq15Ug15TXldeh15hcclxuY29uc3QgRU5WX1dTID0gKGltcG9ydC5tZXRhIGFzIGFueSkuZW52Py5WSVRFX0dBTUVfV1MgYXMgc3RyaW5nIHwgdW5kZWZpbmVkO1xyXG5cclxuaW50ZXJmYWNlIEdhbWVTdGF0ZSB7XHJcbiAgdzogbnVtYmVyO1xyXG4gIGg6IG51bWJlcjtcclxuICBkYXRhOiBudW1iZXJbXTtcclxuICBjaHVua19pZD86IHN0cmluZztcclxuICAvLyB0b3RhbF91c2VyczogTnVtYmVyXHJcbn1cclxuXHJcbmludGVyZmFjZSBWb3hlbEdyaWRQcm9wcyB7XHJcbiAgc2VydmVyVXJsPzogc3RyaW5nOyAvLyDXnteQ16TXqdeoINec16LXp9eV16Mg157XkdeX15XXpSDXkNedINem16jXmdeaXHJcbn1cclxuXHJcbmNvbnN0IFZveGVsR3JpZDogUmVhY3QuRkM8Vm94ZWxHcmlkUHJvcHM+ID0gKHsgc2VydmVyVXJsIH0pID0+IHtcclxuICBjb25zdCBbZ2FtZVN0YXRlLCBzZXRHYW1lU3RhdGVdID0gdXNlU3RhdGU8R2FtZVN0YXRlIHwgbnVsbD4obnVsbCk7XHJcbiAgY29uc3QgW2Nvbm5lY3RlZCwgc2V0Q29ubmVjdGVkXSA9IHVzZVN0YXRlKGZhbHNlKTtcclxuICBjb25zdCBbcGxheWVyQ291bnQsIHNldFBsYXllckNvdW50XSA9IHVzZVN0YXRlKDApO1xyXG4gIGNvbnN0IFtsYXN0QWN0aW9uLCBzZXRMYXN0QWN0aW9uXSA9IHVzZVN0YXRlPHN0cmluZz4oXCJcIik7XHJcblxyXG4gIGNvbnN0IHdzUmVmID0gdXNlUmVmPFdlYlNvY2tldCB8IG51bGw+KG51bGwpO1xyXG4gIGNvbnN0IHJlY29ubmVjdFRpbWVvdXRSZWYgPSB1c2VSZWY8UmV0dXJuVHlwZTx0eXBlb2Ygc2V0VGltZW91dD4gfCBudWxsPihudWxsKTtcclxuICBjb25zdCByZWNvbm5lY3RpbmdSZWYgPSB1c2VSZWY8Ym9vbGVhbj4oZmFsc2UpO1xyXG5cclxuICAvLyDXqtee15nXkyDXnteX15bXmdeoINee15fXqNeV15bXqiDXqten15nXoNeUINecLVdTXHJcbiAgY29uc3QgZ2V0V2ViU29ja2V0VXJsID0gdXNlQ2FsbGJhY2soKCk6IHN0cmluZyA9PiB7XHJcbiAgICBpZiAoc2VydmVyVXJsICYmIHNlcnZlclVybC5zdGFydHNXaXRoKFwid3NcIikpIHJldHVybiBzZXJ2ZXJVcmw7XHJcbiAgICBpZiAoRU5WX1dTICYmIEVOVl9XUy5zdGFydHNXaXRoKFwid3NcIikpIHJldHVybiBFTlZfV1M7XHJcbiAgICBjb25zdCBwcm90byA9IHdpbmRvdy5sb2NhdGlvbi5wcm90b2NvbCA9PT0gXCJodHRwczpcIiA/IFwid3NzOlwiIDogXCJ3czpcIjtcclxuICAgIC8vINeT16jXmiDXlC1FZGdlOiAvZ2FtZS93c1xyXG4gICAgcmV0dXJuIGAke3Byb3RvfS8vJHt3aW5kb3cubG9jYXRpb24uaG9zdG5hbWV9OjgwODAvZ2FtZS93c2A7XHJcbiAgICAgICAgLy8gcmV0dXJuIGAke3Byb3RvfS8vMTI3LjAuMC4xOjcwMDIvd3NgXHJcblxyXG4gIH0sIFtzZXJ2ZXJVcmxdKTtcclxuXHJcbiAgY29uc3QgY29ubmVjdFdlYlNvY2tldCA9IHVzZUNhbGxiYWNrKCgpID0+IHtcclxuICAgIC8vINeQ15wg16rXpNeq15cg15fXmdeR15XXqCDXm9ek15XXnFxyXG4gICAgaWYgKFxyXG4gICAgICB3c1JlZi5jdXJyZW50ICYmXHJcbiAgICAgICh3c1JlZi5jdXJyZW50LnJlYWR5U3RhdGUgPT09IFdlYlNvY2tldC5PUEVOIHx8XHJcbiAgICAgICAgd3NSZWYuY3VycmVudC5yZWFkeVN0YXRlID09PSBXZWJTb2NrZXQuQ09OTkVDVElORylcclxuICAgICkge1xyXG4gICAgICByZXR1cm47XHJcbiAgICB9XHJcblxyXG4gICAgdHJ5IHtcclxuICAgICAgY29uc3QgYmFzZSA9IGdldFdlYlNvY2tldFVybCgpO1xyXG4gICAgICBjb25zdCB0b2tlbiA9IGF1dGhTdG9yYWdlLmdldFRva2VuPy4oKTtcclxuICAgICAgXHJcbiAgICAgIGNvbnN0IHVybDogc3RyaW5nID0gdG9rZW4gPyBgJHtiYXNlfT90b2tlbj0ke2VuY29kZVVSSUNvbXBvbmVudCh0b2tlbil9YCA6IGJhc2U7XHJcbiAgICAgIGNvbnNvbGUubG9nKFwiW1dTIFVSTF1cIiwgdXJsLCBcInRva2VuP1wiLCBCb29sZWFuKHRva2VuKSk7XHJcblxyXG4gICAgICBjb25zdCB3cyA9IG5ldyBXZWJTb2NrZXQodXJsKTtcclxuICAgICAgd3NSZWYuY3VycmVudCA9IHdzO1xyXG5cclxuICAgICAgd3Mub25vcGVuID0gKCkgPT4ge1xyXG4gICAgICAgIHNldENvbm5lY3RlZCh0cnVlKTtcclxuICAgICAgfTtcclxuXHJcbiAgICAgIHdzLm9ubWVzc2FnZSA9IChldmVudCkgPT4ge1xyXG4gICAgICAgIHRyeSB7XHJcbiAgICAgICAgICBjb25zdCBkYXRhID0gSlNPTi5wYXJzZShldmVudC5kYXRhKTtcclxuICAgICAgICAgIGNvbnNvbGUubG9nKFwiZGF0YSAtLVwiLGRhdGEpXHJcbiAgICAgICAgICBpZiAoZGF0YS50eXBlID09PSBcIm1hdHJpeFwiKSB7XHJcbiAgICAgICAgICAgIHNldEdhbWVTdGF0ZSh7XHJcbiAgICAgICAgICAgICAgdzogZGF0YS53LFxyXG4gICAgICAgICAgICAgIGg6IGRhdGEuaCxcclxuICAgICAgICAgICAgICBkYXRhOiBkYXRhLmRhdGEsXHJcbiAgICAgICAgICAgICAgY2h1bmtfaWQ6IGRhdGEuY2h1bmtfaWQsXHJcbiAgICAgICAgICAgICAgLy8gdG90YWxfdXNlcnM6ZGF0YS50b3RhbF91c2Vyc1xyXG4gICAgICAgICAgICB9KTtcclxuICAgICAgICAgICAgXHJcbiAgICAgICAgICAgIGlmIChkYXRhLnRvdGFsX3BsYXllcnMgIT0gdW5kZWZpbmVkKXtcclxuICAgICAgICAgICAgICBzZXRQbGF5ZXJDb3VudChkYXRhLnRvdGFsX3BsYXllcnMpXHJcbiAgICAgICAgICAgIH1cclxuICAgICAgICAgIH1cclxuICAgICAgICB9IGNhdGNoIChlcnIpIHtcclxuICAgICAgICAgIGNvbnNvbGUuZXJyb3IoXCJXUyBwYXJzZSBlcnJvcjpcIiwgZXJyKTtcclxuICAgICAgICB9XHJcbiAgICAgIH07XHJcblxyXG4gICAgICB3cy5vbmNsb3NlID0gKCkgPT4ge1xyXG4gICAgICAgIHNldENvbm5lY3RlZChmYWxzZSk7XHJcbiAgICAgICAgc2V0R2FtZVN0YXRlKG51bGwpO1xyXG4gICAgICAgIHNldFBsYXllckNvdW50KDApO1xyXG4gICAgICAgIGlmICghcmVjb25uZWN0aW5nUmVmLmN1cnJlbnQpIHtcclxuICAgICAgICAgIHJlY29ubmVjdGluZ1JlZi5jdXJyZW50ID0gdHJ1ZTtcclxuICAgICAgICAgIHJlY29ubmVjdFRpbWVvdXRSZWYuY3VycmVudCA9IHNldFRpbWVvdXQoKCkgPT4ge1xyXG4gICAgICAgICAgICByZWNvbm5lY3RpbmdSZWYuY3VycmVudCA9IGZhbHNlO1xyXG4gICAgICAgICAgICBjb25uZWN0V2ViU29ja2V0KCk7XHJcbiAgICAgICAgICB9LCAzMDAwKTtcclxuICAgICAgICB9XHJcbiAgICAgIH07XHJcblxyXG4gICAgICB3cy5vbmVycm9yID0gKCkgPT4ge1xyXG4gICAgICAgIHNldENvbm5lY3RlZChmYWxzZSk7XHJcbiAgICAgIH07XHJcbiAgICB9IGNhdGNoIChlcnIpIHtcclxuICAgICAgY29uc29sZS5lcnJvcihcIldTIGNvbm5lY3QgZmFpbGVkOlwiLCBlcnIpO1xyXG4gICAgICBzZXRDb25uZWN0ZWQoZmFsc2UpO1xyXG4gICAgfVxyXG4gIH0sIFtnZXRXZWJTb2NrZXRVcmxdKTtcclxuXHJcbiAgY29uc3Qgc2VuZE1lc3NhZ2UgPSB1c2VDYWxsYmFjaygobWVzc2FnZTogYW55KSA9PiB7XHJcbiAgICBpZiAod3NSZWYuY3VycmVudD8ucmVhZHlTdGF0ZSA9PT0gV2ViU29ja2V0Lk9QRU4pIHtcclxuICAgICAgd3NSZWYuY3VycmVudC5zZW5kKEpTT04uc3RyaW5naWZ5KG1lc3NhZ2UpKTtcclxuICAgIH1cclxuICB9LCBbXSk7XHJcblxyXG4gIGNvbnN0IGhhbmRsZUtleVByZXNzID0gdXNlQ2FsbGJhY2soXHJcbiAgICAoZXZlbnQ6IEtleWJvYXJkRXZlbnQpID0+IHtcclxuICAgICAgaWYgKCFjb25uZWN0ZWQpIHJldHVybjtcclxuICAgICAgY29uc3Qga2V5ID0gZXZlbnQua2V5LnRvTG93ZXJDYXNlKCk7XHJcbiAgICAgIGxldCBhY3Rpb24gPSBcIlwiO1xyXG4gICAgICBzd2l0Y2ggKGtleSkge1xyXG4gICAgICAgIGNhc2UgXCJhcnJvd3VwXCI6XHJcbiAgICAgICAgY2FzZSBcIndcIjpcclxuICAgICAgICAgIHNlbmRNZXNzYWdlKHsgazogXCJ1cFwiIH0pO1xyXG4gICAgICAgICAgYWN0aW9uID0gXCJNb3ZlZCBVcFwiO1xyXG4gICAgICAgICAgYnJlYWs7XHJcbiAgICAgICAgY2FzZSBcImFycm93ZG93blwiOlxyXG4gICAgICAgIGNhc2UgXCJzXCI6XHJcbiAgICAgICAgICBzZW5kTWVzc2FnZSh7IGs6IFwiZG93blwiIH0pO1xyXG4gICAgICAgICAgYWN0aW9uID0gXCJNb3ZlZCBEb3duXCI7XHJcbiAgICAgICAgICBicmVhaztcclxuICAgICAgICBjYXNlIFwiYXJyb3dsZWZ0XCI6XHJcbiAgICAgICAgY2FzZSBcImFcIjpcclxuICAgICAgICAgIHNlbmRNZXNzYWdlKHsgazogXCJsZWZ0XCIgfSk7XHJcbiAgICAgICAgICBhY3Rpb24gPSBcIk1vdmVkIExlZnRcIjtcclxuICAgICAgICAgIGJyZWFrO1xyXG4gICAgICAgIGNhc2UgXCJhcnJvd3JpZ2h0XCI6XHJcbiAgICAgICAgY2FzZSBcImRcIjpcclxuICAgICAgICAgIHNlbmRNZXNzYWdlKHsgazogXCJyaWdodFwiIH0pO1xyXG4gICAgICAgICAgYWN0aW9uID0gXCJNb3ZlZCBSaWdodFwiO1xyXG4gICAgICAgICAgYnJlYWs7XHJcbiAgICAgICAgY2FzZSBcImNcIjpcclxuICAgICAgICAgIHNlbmRNZXNzYWdlKHsgazogXCJjXCIgfSk7XHJcbiAgICAgICAgICBhY3Rpb24gPSBcIkNvbG9yIENoYW5nZWRcIjtcclxuICAgICAgICAgIGJyZWFrO1xyXG4gICAgICB9XHJcbiAgICAgIGlmIChhY3Rpb24pIHtcclxuICAgICAgICBzZXRMYXN0QWN0aW9uKGFjdGlvbik7XHJcbiAgICAgICAgd2luZG93LnNldFRpbWVvdXQoKCkgPT4gc2V0TGFzdEFjdGlvbihcIlwiKSwgMjAwMCk7XHJcbiAgICAgICAgZXZlbnQucHJldmVudERlZmF1bHQoKTtcclxuICAgICAgfVxyXG4gICAgfSxcclxuICAgIFtjb25uZWN0ZWQsIHNlbmRNZXNzYWdlXVxyXG4gICk7XHJcblxyXG4gIHVzZUVmZmVjdCgoKSA9PiB7XHJcbiAgICBjb25uZWN0V2ViU29ja2V0KCk7XHJcbiAgICByZXR1cm4gKCkgPT4ge1xyXG4gICAgICBpZiAocmVjb25uZWN0VGltZW91dFJlZi5jdXJyZW50KSB7XHJcbiAgICAgICAgY2xlYXJUaW1lb3V0KHJlY29ubmVjdFRpbWVvdXRSZWYuY3VycmVudCk7XHJcbiAgICAgICAgcmVjb25uZWN0VGltZW91dFJlZi5jdXJyZW50ID0gbnVsbDtcclxuICAgICAgfVxyXG4gICAgICB0cnkge1xyXG4gICAgICAgIHdzUmVmLmN1cnJlbnQ/LmNsb3NlKCk7XHJcbiAgICAgICAgd3NSZWYuY3VycmVudCA9IG51bGw7XHJcbiAgICAgIH0gY2F0Y2gge31cclxuICAgIH07XHJcbiAgfSwgW2Nvbm5lY3RXZWJTb2NrZXRdKTtcclxuXHJcbiAgdXNlRWZmZWN0KCgpID0+IHtcclxuICAgIHdpbmRvdy5hZGRFdmVudExpc3RlbmVyKFwia2V5ZG93blwiLCBoYW5kbGVLZXlQcmVzcyk7XHJcbiAgICByZXR1cm4gKCkgPT4gd2luZG93LnJlbW92ZUV2ZW50TGlzdGVuZXIoXCJrZXlkb3duXCIsIGhhbmRsZUtleVByZXNzKTtcclxuICB9LCBbaGFuZGxlS2V5UHJlc3NdKTtcclxuXHJcbiAgY29uc3QgcmVuZGVyR3JpZCA9ICgpID0+IHtcclxuICAgIGlmICghZ2FtZVN0YXRlKSByZXR1cm4gbnVsbDtcclxuICAgIGNvbnN0IGNlbGxzOiBKU1guRWxlbWVudFtdID0gW107XHJcbiAgICBmb3IgKGxldCByID0gMDsgciA8IGdhbWVTdGF0ZS5oOyByKyspIHtcclxuICAgICAgZm9yIChsZXQgYyA9IDA7IGMgPCBnYW1lU3RhdGUudzsgYysrKSB7XHJcbiAgICAgICAgY29uc3QgaSA9IHIgKiBnYW1lU3RhdGUudyArIGM7XHJcbiAgICAgICAgY29uc3QgdiA9IGdhbWVTdGF0ZS5kYXRhW2ldO1xyXG4gICAgICAgIGNvbnN0IGlzUGxheWVyID0gKHYgJiAxKSA9PT0gMTtcclxuXHJcbiAgICAgICAgY29uc3QgZ2V0Qml0ID0gKHg6IG51bWJlciwgYml0OiBudW1iZXIpID0+ICh4ID4+IGJpdCkgJiAxO1xyXG4gICAgICAgIGNvbnN0IGdldDIgPSAoeDogbnVtYmVyLCBiMDogbnVtYmVyLCBiMTogbnVtYmVyKSA9PlxyXG4gICAgICAgICAgKGdldEJpdCh4LCBiMSkgPDwgMSkgfCBnZXRCaXQoeCwgYjApO1xyXG4gICAgICAgIGNvbnN0IHIyID0gZ2V0Mih2LCAyLCA1KTtcclxuICAgICAgICBjb25zdCBnMiA9IGdldDIodiwgMywgNik7XHJcbiAgICAgICAgY29uc3QgYjIgPSBnZXQyKHYsIDQsIDcpO1xyXG4gICAgICAgIGNvbnN0IGJsYW5rID0gIWlzUGxheWVyICYmIHIyID09PSAwICYmIGcyID09PSAwICYmIGIyID09PSAwO1xyXG4gICAgICAgIGNvbnN0IG1hcCA9IFswLCA4NSwgMTcwLCAyNTVdO1xyXG4gICAgICAgIGNvbnN0IGNvbG9yID0gYHJnYigke21hcFtyMl19LCAke21hcFtnMl19LCAke21hcFtiMl19KWA7XHJcblxyXG4gICAgICAgIGNlbGxzLnB1c2goXHJcbiAgICAgICAgICA8ZGl2XHJcbiAgICAgICAgICAgIGtleT17YCR7cn0tJHtjfWB9XHJcbiAgICAgICAgICAgIGNsYXNzTmFtZT17YHZveGVsLWNlbGwgJHtpc1BsYXllciA/IFwidm94ZWwtcGxheWVyXCIgOiBcInZveGVsLWVtcHR5XCJ9YH1cclxuICAgICAgICAgICAgc3R5bGU9e3tcclxuICAgICAgICAgICAgICBiYWNrZ3JvdW5kQ29sb3I6IGJsYW5rID8gXCJ0cmFuc3BhcmVudFwiIDogY29sb3IsXHJcbiAgICAgICAgICAgICAgb3V0bGluZTogaXNQbGF5ZXIgPyBcIjFweCBzb2xpZCByZ2JhKDI1NSwyNTUsMjU1LDAuNilcIiA6IFwibm9uZVwiLFxyXG4gICAgICAgICAgICB9fVxyXG4gICAgICAgICAgLz5cclxuICAgICAgICApO1xyXG4gICAgICB9XHJcbiAgICB9XHJcbiAgICByZXR1cm4gY2VsbHM7XHJcbiAgfTtcclxuXHJcbiAgcmV0dXJuIChcclxuICAgIDxkaXYgY2xhc3NOYW1lPVwibWluLWgtc2NyZWVuIGJnLWdyYWRpZW50LXRvLWJyIGZyb20tc2xhdGUtOTAwIHZpYS1wdXJwbGUtOTAwIHRvLXNsYXRlLTkwMCB0ZXh0LXdoaXRlXCI+XHJcbiAgICAgIDxkaXYgY2xhc3NOYW1lPVwiY29udGFpbmVyIG14LWF1dG8gcHgtNCBweS04XCI+XHJcbiAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJ0ZXh0LWNlbnRlciBtYi04XCI+XHJcbiAgICAgICAgICA8aDEgY2xhc3NOYW1lPVwidGV4dC00eGwgZm9udC1ib2xkIG1iLTQgYmctZ3JhZGllbnQtdG8tciBmcm9tLWJsdWUtNDAwIHRvLXB1cnBsZS00MDAgYmctY2xpcC10ZXh0IHRleHQtdHJhbnNwYXJlbnRcIj5cclxuICAgICAgICAgICAgVm94ZWwgV29ybGRcclxuICAgICAgICAgIDwvaDE+XHJcbiAgICAgICAgICA8cCBjbGFzc05hbWU9XCJ0ZXh0LXNsYXRlLTMwMCB0ZXh0LWxnXCI+XHJcbiAgICAgICAgICAgIEEgbXVsdGlwbGF5ZXIgdm94ZWwgcGxheWdyb3VuZCB3aGVyZSBjb2xvcnMgY29tZSBhbGl2ZVxyXG4gICAgICAgICAgPC9wPlxyXG4gICAgICAgIDwvZGl2PlxyXG5cclxuICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cImZsZXgganVzdGlmeS1jZW50ZXIgaXRlbXMtY2VudGVyIGdhcC02IG1iLThcIj5cclxuICAgICAgICAgIDxkaXZcclxuICAgICAgICAgICAgY2xhc3NOYW1lPXtgZmxleCBpdGVtcy1jZW50ZXIgZ2FwLTIgcHgtNCBweS0yIHJvdW5kZWQtZnVsbCAke1xyXG4gICAgICAgICAgICAgIGNvbm5lY3RlZCA/IFwiYmctZ3JlZW4tNTAwLzIwIHRleHQtZ3JlZW4tMzAwXCIgOiBcImJnLXJlZC01MDAvMjAgdGV4dC1yZWQtMzAwXCJcclxuICAgICAgICAgICAgfWB9XHJcbiAgICAgICAgICA+XHJcbiAgICAgICAgICAgIHtjb25uZWN0ZWQgPyA8V2lmaSBzaXplPXsxOH0gLz4gOiA8V2lmaU9mZiBzaXplPXsxOH0gLz59XHJcbiAgICAgICAgICAgIDxzcGFuIGNsYXNzTmFtZT1cImZvbnQtbWVkaXVtXCI+e2Nvbm5lY3RlZCA/IFwiQ29ubmVjdGVkXCIgOiBcIkNvbm5lY3RpbmcuLi5cIn08L3NwYW4+XHJcbiAgICAgICAgICA8L2Rpdj5cclxuXHJcbiAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cImZsZXggaXRlbXMtY2VudGVyIGdhcC0yIHB4LTQgcHktMiByb3VuZGVkLWZ1bGwgYmctYmx1ZS01MDAvMjAgdGV4dC1ibHVlLTMwMFwiPlxyXG4gICAgICAgICAgICA8VXNlcnMgc2l6ZT17MTh9IC8+XHJcbiAgICAgICAgICAgIDxzcGFuIGNsYXNzTmFtZT1cImZvbnQtbWVkaXVtXCI+e3BsYXllckNvdW50fSBQbGF5ZXJzPC9zcGFuPlxyXG4gICAgICAgICAgPC9kaXY+XHJcblxyXG4gICAgICAgICAge2xhc3RBY3Rpb24gJiYgKFxyXG4gICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cImZsZXggaXRlbXMtY2VudGVyIGdhcC0yIHB4LTQgcHktMiByb3VuZGVkLWZ1bGwgYmctcHVycGxlLTUwMC8yMCB0ZXh0LXB1cnBsZS0zMDAgYW5pbWF0ZS1wdWxzZVwiPlxyXG4gICAgICAgICAgICAgIDxHYW1lcGFkMiBzaXplPXsxOH0gLz5cclxuICAgICAgICAgICAgICA8c3BhbiBjbGFzc05hbWU9XCJmb250LW1lZGl1bVwiPntsYXN0QWN0aW9ufTwvc3Bhbj5cclxuICAgICAgICAgICAgPC9kaXY+XHJcbiAgICAgICAgICApfVxyXG4gICAgICAgIDwvZGl2PlxyXG5cclxuICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cImZsZXgganVzdGlmeS1jZW50ZXIgbWItOFwiPlxyXG4gICAgICAgICAge2dhbWVTdGF0ZSA/IChcclxuICAgICAgICAgICAgPGRpdlxyXG4gICAgICAgICAgICAgIGNsYXNzTmFtZT1cInZveGVsLWdyaWQgYmctc2xhdGUtODAwLzUwIHAtNCByb3VuZGVkLTJ4bCBiYWNrZHJvcC1ibHVyLXNtIGJvcmRlciBib3JkZXItc2xhdGUtNzAwLzUwIHNoYWRvdy0yeGxcIlxyXG4gICAgICAgICAgICAgIHN0eWxlPXt7XHJcbiAgICAgICAgICAgICAgICBkaXNwbGF5OiBcImdyaWRcIixcclxuICAgICAgICAgICAgICAgIGdyaWRUZW1wbGF0ZUNvbHVtbnM6IGByZXBlYXQoJHtnYW1lU3RhdGUud30sIDFmcilgLFxyXG4gICAgICAgICAgICAgICAgZ2FwOiBcIjFweFwiLFxyXG4gICAgICAgICAgICAgICAgbWF4V2lkdGg6IFwiODAwcHhcIixcclxuICAgICAgICAgICAgICAgIGFzcGVjdFJhdGlvOiBcIjFcIixcclxuICAgICAgICAgICAgICB9fVxyXG4gICAgICAgICAgICA+XHJcbiAgICAgICAgICAgICAge3JlbmRlckdyaWQoKX1cclxuICAgICAgICAgICAgPC9kaXY+XHJcbiAgICAgICAgICApIDogKFxyXG4gICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cImZsZXggaXRlbXMtY2VudGVyIGp1c3RpZnktY2VudGVyIHctOTYgaC05NiBiZy1zbGF0ZS04MDAvNTAgcm91bmRlZC0yeGwgYmFja2Ryb3AtYmx1ci1zbSBib3JkZXIgYm9yZGVyLXNsYXRlLTcwMC81MFwiPlxyXG4gICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwidGV4dC1jZW50ZXJcIj5cclxuICAgICAgICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwiYW5pbWF0ZS1zcGluIHctOCBoLTggYm9yZGVyLTIgYm9yZGVyLWJsdWUtNDAwIGJvcmRlci10LXRyYW5zcGFyZW50IHJvdW5kZWQtZnVsbCBteC1hdXRvIG1iLTRcIiAvPlxyXG4gICAgICAgICAgICAgICAgPHAgY2xhc3NOYW1lPVwidGV4dC1zbGF0ZS00MDBcIj5Db25uZWN0aW5nIHRvIHZveGVsIHdvcmxkLi4uPC9wPlxyXG4gICAgICAgICAgICAgIDwvZGl2PlxyXG4gICAgICAgICAgICA8L2Rpdj5cclxuICAgICAgICAgICl9XHJcbiAgICAgICAgPC9kaXY+XHJcblxyXG4gICAgICAgIDxkaXYgY2xhc3NOYW1lPVwibWF4LXctMnhsIG14LWF1dG9cIj5cclxuICAgICAgICAgIDxoMiBjbGFzc05hbWU9XCJ0ZXh0LTJ4bCBmb250LXNlbWlib2xkIG1iLTYgdGV4dC1jZW50ZXIgZmxleCBpdGVtcy1jZW50ZXIganVzdGlmeS1jZW50ZXIgZ2FwLTJcIj5cclxuICAgICAgICAgICAgPEdhbWVwYWQyIGNsYXNzTmFtZT1cInRleHQtcHVycGxlLTQwMFwiIC8+XHJcbiAgICAgICAgICAgIENvbnRyb2xzXHJcbiAgICAgICAgICA8L2gyPlxyXG5cclxuICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwiZ3JpZCBtZDpncmlkLWNvbHMtMiBnYXAtNlwiPlxyXG4gICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cImJnLXNsYXRlLTgwMC81MCBwLTYgcm91bmRlZC14bCBiYWNrZHJvcC1ibHVyLXNtIGJvcmRlciBib3JkZXItc2xhdGUtNzAwLzUwXCI+XHJcbiAgICAgICAgICAgICAgPGgzIGNsYXNzTmFtZT1cInRleHQtbGcgZm9udC1zZW1pYm9sZCBtYi00IHRleHQtYmx1ZS0zMDBcIj5Nb3ZlbWVudDwvaDM+XHJcbiAgICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJzcGFjZS15LTIgdGV4dC1zbGF0ZS0zMDBcIj5cclxuICAgICAgICAgICAgICAgIDxwPjxrYmQgY2xhc3NOYW1lPVwicHgtMiBweS0xIGJnLXNsYXRlLTcwMCByb3VuZGVkIHRleHQteHNcIj7ihpE8L2tiZD4gPGtiZCBjbGFzc05hbWU9XCJweC0yIHB5LTEgYmctc2xhdGUtNzAwIHJvdW5kZWQgdGV4dC14c1wiPlc8L2tiZD4gTW92ZSBVcDwvcD5cclxuICAgICAgICAgICAgICAgIDxwPjxrYmQgY2xhc3NOYW1lPVwicHgtMiBweS0xIGJnLXNsYXRlLTcwMCByb3VuZGVkIHRleHQteHNcIj7ihpM8L2tiZD4gPGtiZCBjbGFzc05hbWU9XCJweC0yIHB5LTEgYmctc2xhdGUtNzAwIHJvdW5kZWQgdGV4dC14c1wiPlM8L2tiZD4gTW92ZSBEb3duPC9wPlxyXG4gICAgICAgICAgICAgICAgPHA+PGtiZCBjbGFzc05hbWU9XCJweC0yIHB5LTEgYmctc2xhdGUtNzAwIHJvdW5kZWQgdGV4dC14c1wiPuKGkDwva2JkPiA8a2JkIGNsYXNzTmFtZT1cInB4LTIgcHktMSBiZy1zbGF0ZS03MDAgcm91bmRlZCB0ZXh0LXhzXCI+QTwva2JkPiBNb3ZlIExlZnQ8L3A+XHJcbiAgICAgICAgICAgICAgICA8cD48a2JkIGNsYXNzTmFtZT1cInB4LTIgcHktMSBiZy1zbGF0ZS03MDAgcm91bmRlZCB0ZXh0LXhzXCI+4oaSPC9rYmQ+IDxrYmQgY2xhc3NOYW1lPVwicHgtMiBweS0xIGJnLXNsYXRlLTcwMCByb3VuZGVkIHRleHQteHNcIj5EPC9rYmQ+IE1vdmUgUmlnaHQ8L3A+XHJcbiAgICAgICAgICAgICAgPC9kaXY+XHJcbiAgICAgICAgICAgIDwvZGl2PlxyXG5cclxuICAgICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJiZy1zbGF0ZS04MDAvNTAgcC02IHJvdW5kZWQteGwgYmFja2Ryb3AtYmx1ci1zbSBib3JkZXIgYm9yZGVyLXNsYXRlLTcwMC81MFwiPlxyXG4gICAgICAgICAgICAgIDxoMyBjbGFzc05hbWU9XCJ0ZXh0LWxnIGZvbnQtc2VtaWJvbGQgbWItNCB0ZXh0LXB1cnBsZS0zMDAgZmxleCBpdGVtcy1jZW50ZXIgZ2FwLTJcIj5cclxuICAgICAgICAgICAgICAgIDxQYWxldHRlIHNpemU9ezE4fSAvPlxyXG4gICAgICAgICAgICAgICAgQ29sb3JzXHJcbiAgICAgICAgICAgICAgPC9oMz5cclxuICAgICAgICAgICAgICA8ZGl2IGNsYXNzTmFtZT1cInNwYWNlLXktMiB0ZXh0LXNsYXRlLTMwMFwiPlxyXG4gICAgICAgICAgICAgICAgPHA+PGtiZCBjbGFzc05hbWU9XCJweC0yIHB5LTEgYmctc2xhdGUtNzAwIHJvdW5kZWQgdGV4dC14c1wiPkM8L2tiZD4gQ3ljbGUgQ29sb3I8L3A+XHJcbiAgICAgICAgICAgICAgICA8cCBjbGFzc05hbWU9XCJ0ZXh0LXNtIHRleHQtc2xhdGUtNDAwIG10LTJcIj5QcmVzcyBDIHRvIGN5Y2xlIHRocm91Z2ggNjQgZGlmZmVyZW50IGNvbG9yIGNvbWJpbmF0aW9uczwvcD5cclxuICAgICAgICAgICAgICA8L2Rpdj5cclxuICAgICAgICAgICAgPC9kaXY+XHJcbiAgICAgICAgICA8L2Rpdj5cclxuICAgICAgICA8L2Rpdj5cclxuXHJcbiAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJ0ZXh0LWNlbnRlciBtdC0xMiB0ZXh0LXNsYXRlLTQwMFwiIC8+XHJcbiAgICAgIDwvZGl2PlxyXG4gICAgPC9kaXY+XHJcbiAgKTtcclxufTtcclxuXHJcbmV4cG9ydCBkZWZhdWx0IFZveGVsR3JpZDtcclxuIl0sImZpbGUiOiJDOi9Vc2Vycy/Xntep16rXntepL0Rlc2t0b3AvbWluZU1pbmNyYWZ0L2NsaWVudC9zcmMvY29tcG9uZW50cy9Wb3hlbEdyaWQudHN4In0=

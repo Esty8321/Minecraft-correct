@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom voxel styles */
+.voxel-cell {
+  @apply aspect-square transition-all duration-200 rounded-sm;
+  min-width: 8px;
+  min-height: 8px;
+}
+
+.voxel-player {
+  @apply shadow-lg transform scale-110;
+  box-shadow: 
+    0 0 10px rgba(255, 255, 255, 0.3),
+    inset 0 0 10px rgba(255, 255, 255, 0.1);
+  animation: voxel-glow 2s ease-in-out infinite alternate;
+}
+
+.voxel-empty {
+  @apply bg-slate-700/20 hover:bg-slate-600/30;
+}
+
+@keyframes voxel-glow {
+  from {
+    box-shadow: 
+      0 0 10px rgba(255, 255, 255, 0.3),
+      inset 0 0 10px rgba(255, 255, 255, 0.1);
+  }
+  to {
+    box-shadow: 
+      0 0 20px rgba(255, 255, 255, 0.5),
+      inset 0 0 15px rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Smooth scrolling and focus styles */
+html {
+  scroll-behavior: smooth;
+}
+
+kbd {
+  @apply font-mono font-semibold;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-500;
+}
+
+/* Grid responsive behavior */
+.voxel-grid {
+  width: min(90vw, 800px);
+  height: min(90vw, 800px);
+}
+
+@media (max-width: 768px) {
+  .voxel-grid {
+    width: min(95vw, 600px);
+    height: min(95vw, 600px);
+  }
+  
+  .voxel-cell {
+    min-width: 6px;
+    min-height: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .voxel-grid {
+    width: min(98vw, 400px);
+    height: min(98vw, 400px);
+  }
+  
+  .voxel-cell {
+    min-width: 4px;
+    min-height: 4px;
+  }
+}

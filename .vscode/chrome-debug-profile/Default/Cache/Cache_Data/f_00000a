@@ -1,0 +1,307 @@
+import { createHotContext as __vite__createHotContext } from "/@vite/client";import.meta.hot = __vite__createHotContext("/src/components/RegisterForm.tsx");import __vite__cjsImport0_react_jsxDevRuntime from "/node_modules/.vite/deps/react_jsx-dev-runtime.js?v=9f0b1529"; const Fragment = __vite__cjsImport0_react_jsxDevRuntime["Fragment"]; const jsxDEV = __vite__cjsImport0_react_jsxDevRuntime["jsxDEV"];
+import * as RefreshRuntime from "/@react-refresh";
+const inWebWorker = typeof WorkerGlobalScope !== "undefined" && self instanceof WorkerGlobalScope;
+let prevRefreshReg;
+let prevRefreshSig;
+if (import.meta.hot && !inWebWorker) {
+  if (!window.$RefreshReg$) {
+    throw new Error(
+      "@vitejs/plugin-react can't detect preamble. Something is wrong."
+    );
+  }
+  prevRefreshReg = window.$RefreshReg$;
+  prevRefreshSig = window.$RefreshSig$;
+  window.$RefreshReg$ = RefreshRuntime.getRefreshReg("C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx");
+  window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
+}
+var _s = $RefreshSig$();
+import __vite__cjsImport3_react from "/node_modules/.vite/deps/react.js?v=9f0b1529"; const useState = __vite__cjsImport3_react["useState"];
+import { UserPlus, Mail, User, Loader2 } from "/node_modules/lucide-react/dist/esm/lucide-react.js?v=9f0b1529";
+import { authApi, ApiError } from "/src/utils/api.ts";
+import { authStorage } from "/src/utils/auth.ts";
+export default function RegisterForm({
+  onSuccess,
+  onDone,
+  onSwitchToLogin
+}) {
+  _s();
+  const [formData, setFormData] = useState({
+    username: "",
+    email: ""
+  });
+  const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.username.trim()) {
+      newErrors.username = "Username is required";
+    } else if (formData.username.length < 3) {
+      newErrors.username = "Username must be at least 3 characters";
+    }
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is setTokenrequired";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    setIsLoading(true);
+    setErrors({});
+    try {
+      const regRes = await authApi.register(formData);
+      const loginRes = await authApi.login({ username: formData.username });
+      authStorage.setToken(loginRes.token);
+      authStorage.setUser(loginRes.user);
+      onSuccess?.(loginRes.user);
+      onDone?.();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.message.includes("username_taken")) {
+          setErrors({ username: "Username is already taken" });
+        } else if (error.message.includes("email_taken")) {
+          setErrors({ email: "Email is already registered" });
+        } else {
+          setErrors({ general: error.message });
+        }
+      } else {
+        setErrors({ general: "Registration failed. Please try again." });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+  return /* @__PURE__ */ jsxDEV("div", { className: "w-full max-w-md", children: [
+    /* @__PURE__ */ jsxDEV("div", { className: "text-center mb-8", children: [
+      /* @__PURE__ */ jsxDEV("div", { className: "inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mb-4", children: /* @__PURE__ */ jsxDEV(UserPlus, { className: "w-8 h-8 text-white" }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+        lineNumber: 111,
+        columnNumber: 11
+      }, this) }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+        lineNumber: 110,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV("h2", { className: "text-3xl font-bold text-gray-800 mb-2", children: "Create Account" }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+        lineNumber: 113,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV("p", { className: "text-gray-600", children: "Join us today and get started" }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+        lineNumber: 114,
+        columnNumber: 9
+      }, this)
+    ] }, void 0, true, {
+      fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+      lineNumber: 109,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ jsxDEV("form", { onSubmit: handleSubmit, className: "space-y-6", children: [
+      errors.general && /* @__PURE__ */ jsxDEV("div", { className: "bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm", children: errors.general }, void 0, false, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+        lineNumber: 119,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV("div", { children: [
+        /* @__PURE__ */ jsxDEV("label", { htmlFor: "username", className: "block text-sm font-medium text-gray-700 mb-2", children: "Username" }, void 0, false, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+          lineNumber: 126,
+          columnNumber: 11
+        }, this),
+        /* @__PURE__ */ jsxDEV("div", { className: "relative", children: [
+          /* @__PURE__ */ jsxDEV(User, { className: "absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" }, void 0, false, {
+            fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+            lineNumber: 130,
+            columnNumber: 13
+          }, this),
+          /* @__PURE__ */ jsxDEV(
+            "input",
+            {
+              type: "text",
+              id: "username",
+              name: "username",
+              value: formData.username,
+              onChange: handleChange,
+              className: `w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.username ? "border-red-300 bg-red-50" : "border-gray-300 bg-white"}`,
+              placeholder: "Enter your username",
+              disabled: isLoading
+            },
+            void 0,
+            false,
+            {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+              lineNumber: 131,
+              columnNumber: 13
+            },
+            this
+          )
+        ] }, void 0, true, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+          lineNumber: 129,
+          columnNumber: 11
+        }, this),
+        errors.username && /* @__PURE__ */ jsxDEV("p", { className: "mt-1 text-sm text-red-600", children: errors.username }, void 0, false, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+          lineNumber: 144,
+          columnNumber: 31
+        }, this)
+      ] }, void 0, true, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+        lineNumber: 125,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV("div", { children: [
+        /* @__PURE__ */ jsxDEV("label", { htmlFor: "email", className: "block text-sm font-medium text-gray-700 mb-2", children: "Email Address" }, void 0, false, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+          lineNumber: 149,
+          columnNumber: 11
+        }, this),
+        /* @__PURE__ */ jsxDEV("div", { className: "relative", children: [
+          /* @__PURE__ */ jsxDEV(Mail, { className: "absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" }, void 0, false, {
+            fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+            lineNumber: 153,
+            columnNumber: 13
+          }, this),
+          /* @__PURE__ */ jsxDEV(
+            "input",
+            {
+              type: "email",
+              id: "email",
+              name: "email",
+              value: formData.email,
+              onChange: handleChange,
+              className: `w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${errors.email ? "border-red-300 bg-red-50" : "border-gray-300 bg-white"}`,
+              placeholder: "Enter your email",
+              disabled: isLoading
+            },
+            void 0,
+            false,
+            {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+              lineNumber: 154,
+              columnNumber: 13
+            },
+            this
+          )
+        ] }, void 0, true, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+          lineNumber: 152,
+          columnNumber: 11
+        }, this),
+        errors.email && /* @__PURE__ */ jsxDEV("p", { className: "mt-1 text-sm text-red-600", children: errors.email }, void 0, false, {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+          lineNumber: 167,
+          columnNumber: 28
+        }, this)
+      ] }, void 0, true, {
+        fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+        lineNumber: 148,
+        columnNumber: 9
+      }, this),
+      /* @__PURE__ */ jsxDEV(
+        "button",
+        {
+          type: "submit",
+          disabled: isLoading,
+          className: "w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center",
+          children: isLoading ? /* @__PURE__ */ jsxDEV(Fragment, { children: [
+            /* @__PURE__ */ jsxDEV(Loader2, { className: "w-5 h-5 mr-2 animate-spin" }, void 0, false, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+              lineNumber: 178,
+              columnNumber: 15
+            }, this),
+            "Creating Account..."
+          ] }, void 0, true, {
+            fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+            lineNumber: 177,
+            columnNumber: 11
+          }, this) : /* @__PURE__ */ jsxDEV(Fragment, { children: [
+            /* @__PURE__ */ jsxDEV(UserPlus, { className: "w-5 h-5 mr-2" }, void 0, false, {
+              fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+              lineNumber: 183,
+              columnNumber: 15
+            }, this),
+            "Create Account"
+          ] }, void 0, true, {
+            fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+            lineNumber: 182,
+            columnNumber: 11
+          }, this)
+        },
+        void 0,
+        false,
+        {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+          lineNumber: 171,
+          columnNumber: 9
+        },
+        this
+      )
+    ] }, void 0, true, {
+      fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+      lineNumber: 117,
+      columnNumber: 7
+    }, this),
+    /* @__PURE__ */ jsxDEV("div", { className: "mt-6 text-center", children: /* @__PURE__ */ jsxDEV("p", { className: "text-gray-600", children: [
+      "Already have an account?",
+      " ",
+      /* @__PURE__ */ jsxDEV(
+        "button",
+        {
+          onClick: onSwitchToLogin,
+          className: "text-blue-600 hover:text-blue-700 font-semibold transition-colors",
+          children: "Sign In"
+        },
+        void 0,
+        false,
+        {
+          fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+          lineNumber: 193,
+          columnNumber: 11
+        },
+        this
+      )
+    ] }, void 0, true, {
+      fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+      lineNumber: 191,
+      columnNumber: 9
+    }, this) }, void 0, false, {
+      fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+      lineNumber: 190,
+      columnNumber: 7
+    }, this)
+  ] }, void 0, true, {
+    fileName: "C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx",
+    lineNumber: 108,
+    columnNumber: 5
+  }, this);
+}
+_s(RegisterForm, "umuDYVuu+dD3RQoFIpeOQUHOWTc=");
+_c = RegisterForm;
+var _c;
+$RefreshReg$(_c, "RegisterForm");
+if (import.meta.hot && !inWebWorker) {
+  window.$RefreshReg$ = prevRefreshReg;
+  window.$RefreshSig$ = prevRefreshSig;
+}
+if (import.meta.hot && !inWebWorker) {
+  RefreshRuntime.__hmr_import(import.meta.url).then((currentExports) => {
+    RefreshRuntime.registerExportsForReactRefresh("C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx", currentExports);
+    import.meta.hot.accept((nextExports) => {
+      if (!nextExports) return;
+      const invalidateMessage = RefreshRuntime.validateRefreshBoundaryAndEnqueueUpdate("C:/Users/משתמש/Desktop/mineMincraft/client/src/components/RegisterForm.tsx", currentExports, nextExports);
+      if (invalidateMessage) import.meta.hot.invalidate(invalidateMessage);
+    });
+  });
+}
+
+//# sourceMappingURL=data:application/json;base64,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QUFBQSxpQkFHQSxJQUVBLG1DQUNFO0FBQUEsbUNBQUMsWUFBUyxXQUFVLGtCQUFwQjtBQUFBO0FBQUE7QUFBQTtBQUFBLG1CQUFrQztBQUFBLFlBQUc7QUFBQSxlQUR2QztBQUFBO0FBQUE7QUFBQTtBQUFBLGlCQUdBO0FBQUE7QUFBQSxRQWRKO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQSxNQWdCQTtBQUFBLFNBdEVGO0FBQUE7QUFBQTtBQUFBO0FBQUEsV0F1RUE7QUFBQSxJQUVBLHVCQUFDLFNBQUksV0FBVSxvQkFDYixpQ0FBQyxPQUFFLFdBQVUsaUJBQWdCO0FBQUE7QUFBQSxNQUNGO0FBQUEsTUFDekI7QUFBQSxRQUFDO0FBQUE7QUFBQSxVQUNDLFNBQVNSO0FBQUFBLFVBQ1QsV0FBVTtBQUFBLFVBQW1FO0FBQUE7QUFBQSxRQUYvRTtBQUFBO0FBQUE7QUFBQTtBQUFBO0FBQUE7QUFBQTtBQUFBO0FBQUEsTUFLQTtBQUFBLFNBUEY7QUFBQTtBQUFBO0FBQUE7QUFBQSxXQVFBLEtBVEY7QUFBQTtBQUFBO0FBQUE7QUFBQSxXQVVBO0FBQUEsT0E1RkY7QUFBQTtBQUFBO0FBQUE7QUFBQSxTQTZGQTtBQUVKO0FBQUNDLEdBM0t1QkosY0FBWTtBQUFBd0MsS0FBWnhDO0FBQVksSUFBQXdDO0FBQUFDLGFBQUFELElBQUEiLCJuYW1lcyI6WyJ1c2VTdGF0ZSIsIlVzZXJQbHVzIiwiTWFpbCIsIlVzZXIiLCJMb2FkZXIyIiwiYXV0aEFwaSIsIkFwaUVycm9yIiwiYXV0aFN0b3JhZ2UiLCJSZWdpc3RlckZvcm0iLCJvblN1Y2Nlc3MiLCJvbkRvbmUiLCJvblN3aXRjaFRvTG9naW4iLCJfcyIsImZvcm1EYXRhIiwic2V0Rm9ybURhdGEiLCJ1c2VybmFtZSIsImVtYWlsIiwiZXJyb3JzIiwic2V0RXJyb3JzIiwiaXNMb2FkaW5nIiwic2V0SXNMb2FkaW5nIiwidmFsaWRhdGVGb3JtIiwibmV3RXJyb3JzIiwidHJpbSIsImxlbmd0aCIsInRlc3QiLCJPYmplY3QiLCJrZXlzIiwiaGFuZGxlU3VibWl0IiwiZSIsInByZXZlbnREZWZhdWx0IiwicmVnUmVzIiwicmVnaXN0ZXIiLCJsb2dpblJlcyIsImxvZ2luIiwic2V0VG9rZW4iLCJ0b2tlbiIsInNldFVzZXIiLCJ1c2VyIiwiZXJyb3IiLCJtZXNzYWdlIiwiaW5jbHVkZXMiLCJnZW5lcmFsIiwiaGFuZGxlQ2hhbmdlIiwibmFtZSIsInZhbHVlIiwidGFyZ2V0IiwicHJldiIsIl9jIiwiJFJlZnJlc2hSZWckIl0sImlnbm9yZUxpc3QiOltdLCJzb3VyY2VzIjpbIlJlZ2lzdGVyRm9ybS50c3giXSwic291cmNlc0NvbnRlbnQiOlsiaW1wb3J0IFJlYWN0LCB7IHVzZVN0YXRlIH0gZnJvbSBcInJlYWN0XCI7XHJcbmltcG9ydCB7IFVzZXJQbHVzLCBNYWlsLCBVc2VyLCBMb2FkZXIyIH0gZnJvbSBcImx1Y2lkZS1yZWFjdFwiO1xyXG5pbXBvcnQgeyBhdXRoQXBpLCBBcGlFcnJvciB9IGZyb20gXCIuLi91dGlscy9hcGlcIjtcclxuaW1wb3J0IHsgYXV0aFN0b3JhZ2UgfSBmcm9tIFwiLi4vdXRpbHMvYXV0aFwiO1xyXG5pbXBvcnQgeyBSZWdpc3RlclJlcXVlc3QgfSBmcm9tIFwiLi4vdHlwZXMvYXV0aFwiO1xyXG5cclxuaW50ZXJmYWNlIFJlZ2lzdGVyRm9ybVByb3BzIHtcclxuICBvblN1Y2Nlc3M/OiAodXNlcjogYW55KSA9PiB2b2lkOyAgICAgLy8gY2FsbGVkIGFmdGVyIHN1Y2Nlc3NmdWwgcmVnaXN0ZXIvbG9naW5cclxuICBvbkRvbmU/OiAoKSA9PiB2b2lkOyAgICAgICAgICAgICAgICAgLy8gbmF2aWdhdGUgYXdheSBpZiBuZWVkZWRcclxuICBvblN3aXRjaFRvTG9naW4/OiAoKSA9PiB2b2lkOyAgICAgICAgLy8gc2hvdyBsb2dpbiBzY3JlZW5cclxufVxyXG5cclxuZXhwb3J0IGRlZmF1bHQgZnVuY3Rpb24gUmVnaXN0ZXJGb3JtKHtcclxuICBvblN1Y2Nlc3MsXHJcbiAgb25Eb25lLFxyXG4gIG9uU3dpdGNoVG9Mb2dpbixcclxufTogUmVnaXN0ZXJGb3JtUHJvcHMpIHtcclxuICBjb25zdCBbZm9ybURhdGEsIHNldEZvcm1EYXRhXSA9IHVzZVN0YXRlPFJlZ2lzdGVyUmVxdWVzdD4oe1xyXG4gICAgdXNlcm5hbWU6IFwiXCIsXHJcbiAgICBlbWFpbDogXCJcIixcclxuICB9KTtcclxuICBjb25zdCBbZXJyb3JzLCBzZXRFcnJvcnNdID0gdXNlU3RhdGU8UmVjb3JkPHN0cmluZywgc3RyaW5nPj4oe30pO1xyXG4gIGNvbnN0IFtpc0xvYWRpbmcsIHNldElzTG9hZGluZ10gPSB1c2VTdGF0ZShmYWxzZSk7XHJcblxyXG4gIGNvbnN0IHZhbGlkYXRlRm9ybSA9ICgpOiBib29sZWFuID0+IHtcclxuICAgIGNvbnN0IG5ld0Vycm9yczogUmVjb3JkPHN0cmluZywgc3RyaW5nPiA9IHt9O1xyXG5cclxuICAgIGlmICghZm9ybURhdGEudXNlcm5hbWUudHJpbSgpKSB7XHJcbiAgICAgIG5ld0Vycm9ycy51c2VybmFtZSA9IFwiVXNlcm5hbWUgaXMgcmVxdWlyZWRcIjtcclxuICAgIH0gZWxzZSBpZiAoZm9ybURhdGEudXNlcm5hbWUubGVuZ3RoIDwgMykge1xyXG4gICAgICBuZXdFcnJvcnMudXNlcm5hbWUgPSBcIlVzZXJuYW1lIG11c3QgYmUgYXQgbGVhc3QgMyBjaGFyYWN0ZXJzXCI7XHJcbiAgICB9XHJcblxyXG4gICAgaWYgKCFmb3JtRGF0YS5lbWFpbC50cmltKCkpIHtcclxuICAgICAgbmV3RXJyb3JzLmVtYWlsID0gXCJFbWFpbCBpcyBzZXRUb2tlbnJlcXVpcmVkXCI7XHJcbiAgICB9IGVsc2UgaWYgKCEvXFxTK0BcXFMrXFwuXFxTKy8udGVzdChmb3JtRGF0YS5lbWFpbCkpIHtcclxuICAgICAgbmV3RXJyb3JzLmVtYWlsID0gXCJQbGVhc2UgZW50ZXIgYSB2YWxpZCBlbWFpbCBhZGRyZXNzXCI7XHJcbiAgICB9XHJcblxyXG4gICAgc2V0RXJyb3JzKG5ld0Vycm9ycyk7XHJcbiAgICByZXR1cm4gT2JqZWN0LmtleXMobmV3RXJyb3JzKS5sZW5ndGggPT09IDA7XHJcbiAgfTtcclxuXHJcbiAgY29uc3QgaGFuZGxlU3VibWl0ID0gYXN5bmMgKGU6IFJlYWN0LkZvcm1FdmVudCkgPT4ge1xyXG4gICAgZS5wcmV2ZW50RGVmYXVsdCgpO1xyXG4gICAgaWYgKCF2YWxpZGF0ZUZvcm0oKSkgcmV0dXJuO1xyXG5cclxuICAgIHNldElzTG9hZGluZyh0cnVlKTtcclxuICAgIHNldEVycm9ycyh7fSk7XHJcblxyXG4gICAgdHJ5IHtcclxuICAgICAgLy8gMSkgUmVnaXN0ZXJcclxuICAgICAgY29uc3QgcmVnUmVzID0gYXdhaXQgYXV0aEFwaS5yZWdpc3Rlcihmb3JtRGF0YSk7XHJcblxyXG4gICAgICAvLyAyKSBBdXRvLWxvZ2luIChieSB1c2VybmFtZSB0byBrZWVwIGl0IHNpbXBsZSlcclxuICAgICAgY29uc3QgbG9naW5SZXMgPSBhd2FpdCBhdXRoQXBpLmxvZ2luKHsgdXNlcm5hbWU6IGZvcm1EYXRhLnVzZXJuYW1lIH0pO1xyXG5cclxuICAgICAgLy8gMykgUGVyc2lzdCBzZXNzaW9uXHJcbiAgICAgIGF1dGhTdG9yYWdlLnNldFRva2VuKGxvZ2luUmVzLnRva2VuKTtcclxuICAgICAgYXV0aFN0b3JhZ2Uuc2V0VXNlcihsb2dpblJlcy51c2VyKTtcclxuXHJcbiAgICAgIC8vIDQpIENhbGxiYWNrc1xyXG4gICAgICBvblN1Y2Nlc3M/Lihsb2dpblJlcy51c2VyKTtcclxuICAgICAgb25Eb25lPy4oKTtcclxuICAgIH0gY2F0Y2ggKGVycm9yKSB7XHJcbiAgICAgIGlmIChlcnJvciBpbnN0YW5jZW9mIEFwaUVycm9yKSB7XHJcbiAgICAgICAgaWYgKGVycm9yLm1lc3NhZ2UuaW5jbHVkZXMoXCJ1c2VybmFtZV90YWtlblwiKSkge1xyXG4gICAgICAgICAgc2V0RXJyb3JzKHsgdXNlcm5hbWU6IFwiVXNlcm5hbWUgaXMgYWxyZWFkeSB0YWtlblwiIH0pO1xyXG4gICAgICAgIH0gZWxzZSBpZiAoZXJyb3IubWVzc2FnZS5pbmNsdWRlcyhcImVtYWlsX3Rha2VuXCIpKSB7XHJcbiAgICAgICAgICBzZXRFcnJvcnMoeyBlbWFpbDogXCJFbWFpbCBpcyBhbHJlYWR5IHJlZ2lzdGVyZWRcIiB9KTtcclxuICAgICAgICB9IGVsc2Uge1xyXG4gICAgICAgICAgc2V0RXJyb3JzKHsgZ2VuZXJhbDogZXJyb3IubWVzc2FnZSB9KTtcclxuICAgICAgICB9XHJcbiAgICAgIH0gZWxzZSB7XHJcbiAgICAgICAgc2V0RXJyb3JzKHsgZ2VuZXJhbDogXCJSZWdpc3RyYXRpb24gZmFpbGVkLiBQbGVhc2UgdHJ5IGFnYWluLlwiIH0pO1xyXG4gICAgICB9XHJcbiAgICB9IGZpbmFsbHkge1xyXG4gICAgICBzZXRJc0xvYWRpbmcoZmFsc2UpO1xyXG4gICAgfVxyXG4gIH07XHJcblxyXG4gIGNvbnN0IGhhbmRsZUNoYW5nZSA9IChlOiBSZWFjdC5DaGFuZ2VFdmVudDxIVE1MSW5wdXRFbGVtZW50PikgPT4ge1xyXG4gICAgY29uc3QgeyBuYW1lLCB2YWx1ZSB9ID0gZS50YXJnZXQ7XHJcbiAgICBzZXRGb3JtRGF0YSgocHJldikgPT4gKHsgLi4ucHJldiwgW25hbWVdOiB2YWx1ZSB9KSk7XHJcbiAgICBpZiAoZXJyb3JzW25hbWVdKSBzZXRFcnJvcnMoKHByZXYpID0+ICh7IC4uLnByZXYsIFtuYW1lXTogXCJcIiB9KSk7XHJcbiAgfTtcclxuXHJcbiAgcmV0dXJuIChcclxuICAgIDxkaXYgY2xhc3NOYW1lPVwidy1mdWxsIG1heC13LW1kXCI+XHJcbiAgICAgIDxkaXYgY2xhc3NOYW1lPVwidGV4dC1jZW50ZXIgbWItOFwiPlxyXG4gICAgICAgIDxkaXYgY2xhc3NOYW1lPVwiaW5saW5lLWZsZXggaXRlbXMtY2VudGVyIGp1c3RpZnktY2VudGVyIHctMTYgaC0xNiBiZy1ncmFkaWVudC10by1iciBmcm9tLWJsdWUtNTAwIHRvLXB1cnBsZS02MDAgcm91bmRlZC1mdWxsIG1iLTRcIj5cclxuICAgICAgICAgIDxVc2VyUGx1cyBjbGFzc05hbWU9XCJ3LTggaC04IHRleHQtd2hpdGVcIiAvPlxyXG4gICAgICAgIDwvZGl2PlxyXG4gICAgICAgIDxoMiBjbGFzc05hbWU9XCJ0ZXh0LTN4bCBmb250LWJvbGQgdGV4dC1ncmF5LTgwMCBtYi0yXCI+Q3JlYXRlIEFjY291bnQ8L2gyPlxyXG4gICAgICAgIDxwIGNsYXNzTmFtZT1cInRleHQtZ3JheS02MDBcIj5Kb2luIHVzIHRvZGF5IGFuZCBnZXQgc3RhcnRlZDwvcD5cclxuICAgICAgPC9kaXY+XHJcblxyXG4gICAgICA8Zm9ybSBvblN1Ym1pdD17aGFuZGxlU3VibWl0fSBjbGFzc05hbWU9XCJzcGFjZS15LTZcIj5cclxuICAgICAgICB7ZXJyb3JzLmdlbmVyYWwgJiYgKFxyXG4gICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJiZy1yZWQtNTAgYm9yZGVyIGJvcmRlci1yZWQtMjAwIHRleHQtcmVkLTYwMCBweC00IHB5LTMgcm91bmRlZC1sZyB0ZXh0LXNtXCI+XHJcbiAgICAgICAgICAgIHtlcnJvcnMuZ2VuZXJhbH1cclxuICAgICAgICAgIDwvZGl2PlxyXG4gICAgICAgICl9XHJcblxyXG4gICAgICAgIHsvKiBVc2VybmFtZSAqL31cclxuICAgICAgICA8ZGl2PlxyXG4gICAgICAgICAgPGxhYmVsIGh0bWxGb3I9XCJ1c2VybmFtZVwiIGNsYXNzTmFtZT1cImJsb2NrIHRleHQtc20gZm9udC1tZWRpdW0gdGV4dC1ncmF5LTcwMCBtYi0yXCI+XHJcbiAgICAgICAgICAgIFVzZXJuYW1lXHJcbiAgICAgICAgICA8L2xhYmVsPlxyXG4gICAgICAgICAgPGRpdiBjbGFzc05hbWU9XCJyZWxhdGl2ZVwiPlxyXG4gICAgICAgICAgICA8VXNlciBjbGFzc05hbWU9XCJhYnNvbHV0ZSBsZWZ0LTMgdG9wLTEvMiB0cmFuc2Zvcm0gLXRyYW5zbGF0ZS15LTEvMiB0ZXh0LWdyYXktNDAwIHctNSBoLTVcIiAvPlxyXG4gICAgICAgICAgICA8aW5wdXRcclxuICAgICAgICAgICAgICB0eXBlPVwidGV4dFwiXHJcbiAgICAgICAgICAgICAgaWQ9XCJ1c2VybmFtZVwiXHJcbiAgICAgICAgICAgICAgbmFtZT1cInVzZXJuYW1lXCJcclxuICAgICAgICAgICAgICB2YWx1ZT17Zm9ybURhdGEudXNlcm5hbWV9XHJcbiAgICAgICAgICAgICAgb25DaGFuZ2U9e2hhbmRsZUNoYW5nZX1cclxuICAgICAgICAgICAgICBjbGFzc05hbWU9e2B3LWZ1bGwgcGwtMTAgcHItNCBweS0zIGJvcmRlciByb3VuZGVkLWxnIGZvY3VzOnJpbmctMiBmb2N1czpyaW5nLWJsdWUtNTAwIGZvY3VzOmJvcmRlci1ibHVlLTUwMCB0cmFuc2l0aW9uLWNvbG9ycyAke1xyXG4gICAgICAgICAgICAgICAgZXJyb3JzLnVzZXJuYW1lID8gXCJib3JkZXItcmVkLTMwMCBiZy1yZWQtNTBcIiA6IFwiYm9yZGVyLWdyYXktMzAwIGJnLXdoaXRlXCJcclxuICAgICAgICAgICAgICB9YH1cclxuICAgICAgICAgICAgICBwbGFjZWhvbGRlcj1cIkVudGVyIHlvdXIgdXNlcm5hbWVcIlxyXG4gICAgICAgICAgICAgIGRpc2FibGVkPXtpc0xvYWRpbmd9XHJcbiAgICAgICAgICAgIC8+XHJcbiAgICAgICAgICA8L2Rpdj5cclxuICAgICAgICAgIHtlcnJvcnMudXNlcm5hbWUgJiYgPHAgY2xhc3NOYW1lPVwibXQtMSB0ZXh0LXNtIHRleHQtcmVkLTYwMFwiPntlcnJvcnMudXNlcm5hbWV9PC9wPn1cclxuICAgICAgICA8L2Rpdj5cclxuXHJcbiAgICAgICAgey8qIEVtYWlsICovfVxyXG4gICAgICAgIDxkaXY+XHJcbiAgICAgICAgICA8bGFiZWwgaHRtbEZvcj1cImVtYWlsXCIgY2xhc3NOYW1lPVwiYmxvY2sgdGV4dC1zbSBmb250LW1lZGl1bSB0ZXh0LWdyYXktNzAwIG1iLTJcIj5cclxuICAgICAgICAgICAgRW1haWwgQWRkcmVzc1xyXG4gICAgICAgICAgPC9sYWJlbD5cclxuICAgICAgICAgIDxkaXYgY2xhc3NOYW1lPVwicmVsYXRpdmVcIj5cclxuICAgICAgICAgICAgPE1haWwgY2xhc3NOYW1lPVwiYWJzb2x1dGUgbGVmdC0zIHRvcC0xLzIgdHJhbnNmb3JtIC10cmFuc2xhdGUteS0xLzIgdGV4dC1ncmF5LTQwMCB3LTUgaC01XCIgLz5cclxuICAgICAgICAgICAgPGlucHV0XHJcbiAgICAgICAgICAgICAgdHlwZT1cImVtYWlsXCJcclxuICAgICAgICAgICAgICBpZD1cImVtYWlsXCJcclxuICAgICAgICAgICAgICBuYW1lPVwiZW1haWxcIlxyXG4gICAgICAgICAgICAgIHZhbHVlPXtmb3JtRGF0YS5lbWFpbH1cclxuICAgICAgICAgICAgICBvbkNoYW5nZT17aGFuZGxlQ2hhbmdlfVxyXG4gICAgICAgICAgICAgIGNsYXNzTmFtZT17YHctZnVsbCBwbC0xMCBwci00IHB5LTMgYm9yZGVyIHJvdW5kZWQtbGcgZm9jdXM6cmluZy0yIGZvY3VzOnJpbmctYmx1ZS01MDAgZm9jdXM6Ym9yZGVyLWJsdWUtNTAwIHRyYW5zaXRpb24tY29sb3JzICR7XHJcbiAgICAgICAgICAgICAgICBlcnJvcnMuZW1haWwgPyBcImJvcmRlci1yZWQtMzAwIGJnLXJlZC01MFwiIDogXCJib3JkZXItZ3JheS0zMDAgYmctd2hpdGVcIlxyXG4gICAgICAgICAgICAgIH1gfVxyXG4gICAgICAgICAgICAgIHBsYWNlaG9sZGVyPVwiRW50ZXIgeW91ciBlbWFpbFwiXHJcbiAgICAgICAgICAgICAgZGlzYWJsZWQ9e2lzTG9hZGluZ31cclxuICAgICAgICAgICAgLz5cclxuICAgICAgICAgIDwvZGl2PlxyXG4gICAgICAgICAge2Vycm9ycy5lbWFpbCAmJiA8cCBjbGFzc05hbWU9XCJtdC0xIHRleHQtc20gdGV4dC1yZWQtNjAwXCI+e2Vycm9ycy5lbWFpbH08L3A+fVxyXG4gICAgICAgIDwvZGl2PlxyXG5cclxuICAgICAgICB7LyogU3VibWl0ICovfVxyXG4gICAgICAgIDxidXR0b25cclxuICAgICAgICAgIHR5cGU9XCJzdWJtaXRcIlxyXG4gICAgICAgICAgZGlzYWJsZWQ9e2lzTG9hZGluZ31cclxuICAgICAgICAgIGNsYXNzTmFtZT1cInctZnVsbCBiZy1ncmFkaWVudC10by1yIGZyb20tYmx1ZS01MDAgdG8tcHVycGxlLTYwMCB0ZXh0LXdoaXRlIGZvbnQtc2VtaWJvbGQgcHktMyBweC00IHJvdW5kZWQtbGcgaG92ZXI6ZnJvbS1ibHVlLTYwMCBob3Zlcjp0by1wdXJwbGUtNzAwIGZvY3VzOm91dGxpbmUtbm9uZSBmb2N1czpyaW5nLTIgZm9jdXM6cmluZy1ibHVlLTUwMCBmb2N1czpyaW5nLW9mZnNldC0yIHRyYW5zaXRpb24tYWxsIGR1cmF0aW9uLTIwMCBkaXNhYmxlZDpvcGFjaXR5LTUwIGRpc2FibGVkOmN1cnNvci1ub3QtYWxsb3dlZCBmbGV4IGl0ZW1zLWNlbnRlciBqdXN0aWZ5LWNlbnRlclwiXHJcbiAgICAgICAgPlxyXG4gICAgICAgICAge2lzTG9hZGluZyA/IChcclxuICAgICAgICAgICAgPD5cclxuICAgICAgICAgICAgICA8TG9hZGVyMiBjbGFzc05hbWU9XCJ3LTUgaC01IG1yLTIgYW5pbWF0ZS1zcGluXCIgLz5cclxuICAgICAgICAgICAgICBDcmVhdGluZyBBY2NvdW50Li4uXHJcbiAgICAgICAgICAgIDwvPlxyXG4gICAgICAgICAgKSA6IChcclxuICAgICAgICAgICAgPD5cclxuICAgICAgICAgICAgICA8VXNlclBsdXMgY2xhc3NOYW1lPVwidy01IGgtNSBtci0yXCIgLz5cclxuICAgICAgICAgICAgICBDcmVhdGUgQWNjb3VudFxyXG4gICAgICAgICAgICA8Lz5cclxuICAgICAgICAgICl9XHJcbiAgICAgICAgPC9idXR0b24+XHJcbiAgICAgIDwvZm9ybT5cclxuXHJcbiAgICAgIDxkaXYgY2xhc3NOYW1lPVwibXQtNiB0ZXh0LWNlbnRlclwiPlxyXG4gICAgICAgIDxwIGNsYXNzTmFtZT1cInRleHQtZ3JheS02MDBcIj5cclxuICAgICAgICAgIEFscmVhZHkgaGF2ZSBhbiBhY2NvdW50P3tcIiBcIn1cclxuICAgICAgICAgIDxidXR0b25cclxuICAgICAgICAgICAgb25DbGljaz17b25Td2l0Y2hUb0xvZ2lufVxyXG4gICAgICAgICAgICBjbGFzc05hbWU9XCJ0ZXh0LWJsdWUtNjAwIGhvdmVyOnRleHQtYmx1ZS03MDAgZm9udC1zZW1pYm9sZCB0cmFuc2l0aW9uLWNvbG9yc1wiXHJcbiAgICAgICAgICA+XHJcbiAgICAgICAgICAgIFNpZ24gSW5cclxuICAgICAgICAgIDwvYnV0dG9uPlxyXG4gICAgICAgIDwvcD5cclxuICAgICAgPC9kaXY+XHJcbiAgICA8L2Rpdj5cclxuICApO1xyXG59XHJcbiJdLCJmaWxlIjoiQzovVXNlcnMv157Xqdeq157XqS9EZXNrdG9wL21pbmVNaW5jcmFmdC9jbGllbnQvc3JjL2NvbXBvbmVudHMvUmVnaXN0ZXJGb3JtLnRzeCJ9
