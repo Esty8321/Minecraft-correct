@@ -91,7 +91,7 @@ def register(inp: RegisterIn):
         algorithm=JWT_ALG,
     )
     #insert for the active users in the chat
-    return {"ok": True, "user": user, "token": token}
+    return {"ok": True, "user": user, "token": token,"player_id":user["id"]}
 
 @app.post("/login")
 def login(inp: LoginIn):
@@ -134,8 +134,23 @@ def login(inp: LoginIn):
     )
     print(f"[AUTH] ✅ success for {user['username']} id={user['id']}")
     #insert for the active users in the chat
-    return {"ok": True, "user": user, "token": token}
+    return {"ok": True, "user": user, "token": token, "player_id":user["id"]}
 
 @app.get("/health")
 def health():
     return {"ok": True, "service": "auth"}
+
+@app.get("/players")
+async def get_players():
+    try:
+        if not DATA.exists():
+            print(f"[AUTH] users.json not found at {DATA}")
+            return {"players": []}
+
+        with open(DATA, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        return {"players": data.get("users", [])}
+    except Exception as e:
+        print(f"[AUTH] Error reading players:", e)
+        return {"players": []}

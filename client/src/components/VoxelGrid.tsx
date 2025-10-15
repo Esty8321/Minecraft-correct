@@ -1,6 +1,9 @@
 // import React, { useEffect, useState, useCallback, useRef } from "react";
-// import { Wifi, WifiOff, Users, Gamepad2, Palette } from "lucide-react";
-
+// import { Wifi, WifiOff, Users, Gamepad2, Palette, MessageCircle, X } from "lucide-react";
+// import { authStorage } from "../utils/auth";
+// import { MessageBubble } from "./MessageBubble";
+// import { MessageInput } from "./MessageInput";
+// import ChatPanel from "./Chat/ChatPanel";
 // const ENV_WS = (import.meta as any).env?.VITE_GAME_WS as string | undefined;
 
 // interface GameState {
@@ -8,13 +11,11 @@
 //   h: number;
 //   data: number[];
 //   chunk_id?: string;
-//   // total_users: Number
 // }
 
 // interface VoxelGridProps {
-//   serverUrl?: string; // מאפשר לעקוף מבחוץ אם צריך
+//   serverUrl?: string;
 // }
-
 
 // const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
 //   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -22,23 +23,24 @@
 //   const [playerCount, setPlayerCount] = useState(0);
 //   const [lastAction, setLastAction] = useState<string>("");
 
+//   const [showChat, setShowChat] = useState(false)
 //   const wsRef = useRef<WebSocket | null>(null);
 //   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 //   const reconnectingRef = useRef<boolean>(false);
 
-//   // תמיד מחזיר מחרוזת תקינה ל-WS
+//   const [showMessageInput, setShowMessageInput] = useState(false);
+//   const [currentMessage, setCurrentMessage] = useState<any>(null);
+//   const [error, setError] = useState<string | null>(null);
+//   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
 //   const getWebSocketUrl = useCallback((): string => {
 //     if (serverUrl && serverUrl.startsWith("ws")) return serverUrl;
 //     if (ENV_WS && ENV_WS.startsWith("ws")) return ENV_WS;
 //     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-//     // דרך ה-Edge: /game/ws
-//     return `${proto}//${window.location.hostname}:8080/game/ws`;
-//     // return `${proto}//127.0.0.1:7002/ws`
-
+//     return `${proto}//${window.location.host}/game/ws`;
 //   }, [serverUrl]);
 
-//   const connectWebSocket = useCallback((token:string) => {
-//     // אל תפתח חיבור כפול
+//   const connectWebSocket = useCallback(() => {
 //     if (
 //       wsRef.current &&
 //       (wsRef.current.readyState === WebSocket.OPEN ||
@@ -49,31 +51,45 @@
 
 //     try {
 //       const base = getWebSocketUrl();
-//       // ודא שיש טוקן לפני חיבור (כדי לא לפתוח WS בלי token מיד לאחר login)
-//       // const token = authStorage.getToken?.();//??
-//       // const token = localStorage.getItem("token")
-//       console.log("the token is----", token)
-//       if (!token) {
-//         console.warn("No token found in localStorage. WS connection aborted.");
-//         return;
-//       }
-//       const url: string = token ? `${base}?token=${encodeURIComponent(token)}` : base;
+//       const token = authStorage.getToken?.() ?? localStorage.getItem("token") ?? "";
+//       if (!token) return;
+//       const url = `${base}?token=${encodeURIComponent(token)}`;
 
 //       const ws = new WebSocket(url);
 //       wsRef.current = ws;
 
-//       ws.onopen = () => setConnected(true);
+//       ws.onopen = () => {
+//         setConnected(true);
+//         try {
+//           ws.send(JSON.stringify({ k: "whereami" }));
+//         } catch {}
+//       };
 
 //       ws.onmessage = (event) => {
 //         try {
 //           const data = JSON.parse(event.data);
 //           if (data.type === "matrix") {
-//             setGameState({ w: data.w, h: data.h, data: data.data, chunk_id: data.chunk_id });
-//             if (data.total_players != undefined) setPlayerCount(data.total_players);
+//             setGameState({
+//               w: data.w,
+//               h: data.h,
+//               data: data.data,
+//               chunk_id: data.chunk_id,
+//             });
+//             if (Array.isArray(data.data)) {
+//               const players = data.data.filter((cell: number) => (cell & 1) === 1);
+//               setPlayerCount(players.length);
+//             } else if (typeof data.total_players === "number") {
+//               setPlayerCount(data.total_players);
+//             }
+//           } else if (data.type === "message" && data.data) {
+//             setCurrentMessage(data.data);
+//             if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+//             hideTimerRef.current = setTimeout(() => setCurrentMessage(null), 5000);
+//           } else if (data.type === "error" && data.code === "SPACE_OCCUPIED") {
+//             setError("Oops! This spot already has a message! 📫");
+//             setTimeout(() => setError(null), 3000);
 //           }
-//         } catch (err) {
-//           console.error("WS parse error:", err);
-//         }
+//         } catch {}
 //       };
 
 //       ws.onclose = () => {
@@ -84,20 +100,16 @@
 //           reconnectingRef.current = true;
 //           reconnectTimeoutRef.current = setTimeout(() => {
 //             reconnectingRef.current = false;
-//             const token = localStorage.getItem("token")
-
-//             connectWebSocket(token?token:"");
+//             connectWebSocket();
 //           }, 3000);
 //         }
 //       };
 
 //       ws.onerror = () => setConnected(false);
-//     } catch (err) {
-//       console.error("WS connect failed:", err);
+//     } catch {
 //       setConnected(false);
 //     }
 //   }, [getWebSocketUrl]);
-
 
 //   const sendMessage = useCallback((message: any) => {
 //     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -131,6 +143,10 @@
 //           sendMessage({ k: "right" });
 //           action = "Moved Right";
 //           break;
+//         case "m":
+//           setShowMessageInput(true);
+//           action = "Writing Message";
+//           break;
 //         case "c":
 //           sendMessage({ k: "c" });
 //           action = "Color Changed";
@@ -145,19 +161,21 @@
 //     [connected, sendMessage]
 //   );
 
-//   useEffect(() => { 
-//     const token = localStorage.getItem("token")
-//     if(!token)return
-//     connectWebSocket(token);
+//   useEffect(() => {
+//     connectWebSocket();
 //     return () => {
 //       if (reconnectTimeoutRef.current) {
 //         clearTimeout(reconnectTimeoutRef.current);
 //         reconnectTimeoutRef.current = null;
 //       }
+//       if (hideTimerRef.current) {
+//         clearTimeout(hideTimerRef.current);
+//         hideTimerRef.current = null;
+//       }
 //       try {
 //         wsRef.current?.close();
 //         wsRef.current = null;
-//       } catch { }
+//       } catch {}
 //     };
 //   }, [connectWebSocket]);
 
@@ -176,8 +194,7 @@
 //         const isPlayer = (v & 1) === 1;
 
 //         const getBit = (x: number, bit: number) => (x >> bit) & 1;
-//         const get2 = (x: number, b0: number, b1: number) =>
-//           (getBit(x, b1) << 1) | getBit(x, b0);
+//         const get2 = (x: number, b0: number, b1: number) => (getBit(x, b1) << 1) | getBit(x, b0);
 //         const r2 = get2(v, 2, 5);
 //         const g2 = get2(v, 3, 6);
 //         const b2 = get2(v, 4, 7);
@@ -200,41 +217,12 @@
 //     return cells;
 //   };
 
-//   return (
-//     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">      
-//       <div className="container mx-auto px-4 py-8">
-//         <div className="text-center mb-8">
-//           <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-//             Voxel World
-//           </h1>
-//           <p className="text-slate-300 text-lg">
-//             A multiplayer voxel playground where colors come alive
-//           </p>
-//         </div>
-
-//         <div className="flex justify-center items-center gap-6 mb-8">
-//           <div
-//             className={`flex items-center gap-2 px-4 py-2 rounded-full ${connected ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"
-//               }`}
-//           >
-//             {connected ? <Wifi size={18} /> : <WifiOff size={18} />}
-//             <span className="font-medium">{connected ? "Connected" : "Connecting..."}</span>
-//           </div>
-
-//           <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-300">
-//             <Users size={18} />
-//             <span className="font-medium">{playerCount} Players</span>
-//           </div>
-
-//           {lastAction && (
-//             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 text-purple-300 animate-pulse">
-//               <Gamepad2 size={18} />
-//               <span className="font-medium">{lastAction}</span>
-//             </div>
-//           )}
-//         </div>
-
-//         <div className="flex justify-center mb-8">
+// return (
+//     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
+//       {/* GAME + CHAT SPLIT */}
+//       <div className="flex h-screen">
+//         {/* --- GAME SIDE --- */}
+//         <div className={`transition-all duration-500 ${showChat ? "w-1/2" : "w-full"} flex justify-center items-center`}>
 //           {gameState ? (
 //             <div
 //               className="voxel-grid bg-slate-800/50 p-4 rounded-2xl backdrop-blur-sm border border-slate-700/50 shadow-2xl"
@@ -249,47 +237,53 @@
 //               {renderGrid()}
 //             </div>
 //           ) : (
-//             <div className="flex items-center justify-center w-96 h-96 bg-slate-800/50 rounded-2xl backdrop-blur-sm border border-slate-700/50">
-//               <div className="text-center">
-//                 <div className="animate-spin w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full mx-auto mb-4" />
-//                 <p className="text-slate-400">Connecting to voxel world...</p>
-//               </div>
-//             </div>
+//             <div className="text-slate-400">Connecting to voxel world...</div>
 //           )}
 //         </div>
 
-//         <div className="max-w-2xl mx-auto">
-//           <h2 className="text-2xl font-semibold mb-6 text-center flex items-center justify-center gap-2">
-//             <Gamepad2 className="text-purple-400" />
-//             Controls
-//           </h2>
-
-//           <div className="grid md:grid-cols-2 gap-6">
-//             <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
-//               <h3 className="text-lg font-semibold mb-4 text-blue-300">Movement</h3>
-//               <div className="space-y-2 text-slate-300">
-//                 <p><kbd className="px-2 py-1 bg-slate-700 rounded text-xs">↑</kbd> <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">W</kbd> Move Up</p>
-//                 <p><kbd className="px-2 py-1 bg-slate-700 rounded text-xs">↓</kbd> <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">S</kbd> Move Down</p>
-//                 <p><kbd className="px-2 py-1 bg-slate-700 rounded text-xs">←</kbd> <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">A</kbd> Move Left</p>
-//                 <p><kbd className="px-2 py-1 bg-slate-700 rounded text-xs">→</kbd> <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">D</kbd> Move Right</p>
-//               </div>
-//             </div>
-
-//             <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
-//               <h3 className="text-lg font-semibold mb-4 text-purple-300 flex items-center gap-2">
-//                 <Palette size={18} />
-//                 Colors
-//               </h3>
-//               <div className="space-y-2 text-slate-300">
-//                 <p><kbd className="px-2 py-1 bg-slate-700 rounded text-xs">C</kbd> Cycle Color</p>
-//                 <p className="text-sm text-slate-400 mt-2">Press C to cycle through 64 different color combinations</p>
-//               </div>
-//             </div>
-//           </div>
+//         {/* --- CHAT SIDE --- */}
+//         <div
+//           className={`transition-all duration-500 bg-gray-50 text-black ${
+//             showChat ? "w-1/2 opacity-100" : "w-0 opacity-0 pointer-events-none"
+//           } shadow-lg overflow-hidden`}
+//         >
+//           <ChatPanel />
 //         </div>
-
-//         <div className="text-center mt-12 text-slate-400" />
 //       </div>
+
+//       {/* --- FLOAT BUTTON --- */}
+//       <button
+//         onClick={() => setShowChat((prev) => !prev)}
+//         className="absolute top-6 right-6 bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-full shadow-xl transition-all"
+//         title={showChat ? "Close Chat" : "Open Chat"}
+//       >
+//         {showChat ? <X size={22} /> : <MessageCircle size={22} />}
+//       </button>
+
+//       {/* --- STATUS --- */}
+//       <div className="absolute bottom-4 left-4 text-sm text-slate-300 flex items-center gap-3">
+//         {connected ? <Wifi className="text-green-400" size={16} /> : <WifiOff className="text-red-400" size={16} />}
+//         <span>{connected ? "Connected" : "Disconnected"} • {playerCount} players</span>
+//       </div>
+
+//       {/* --- MESSAGE INPUT / BUBBLES --- */}
+//       {showMessageInput && (
+//         <MessageInput
+//           onSubmit={(content: string) => {
+//             sendMessage({ k: "m", content });
+//             setShowMessageInput(false);
+//           }}
+//           onClose={() => setShowMessageInput(false)}
+//         />
+//       )}
+
+//       {currentMessage && <MessageBubble message={currentMessage} />}
+
+//       {error && (
+//         <div className="fixed top-4 right-4 bg-red-50 text-red-600 px-4 py-3 rounded-lg shadow-lg border border-red-200 animate-fade-in">
+//           {error}
+//         </div>
+//       )}
 //     </div>
 //   );
 // };
@@ -297,12 +291,18 @@
 // export default VoxelGrid;
 
 
+
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { Wifi, WifiOff, Users, Gamepad2, Palette, MessageCircle } from "lucide-react";
+import {
+  Wifi,
+  WifiOff,
+  MessageCircle,
+  X
+} from "lucide-react";
 import { authStorage } from "../utils/auth";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
-
+import ChatRoot from "./Chat/ChatRoot"; // ✅ full chat app
 const ENV_WS = (import.meta as any).env?.VITE_GAME_WS as string | undefined;
 
 interface GameState {
@@ -322,6 +322,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
   const [playerCount, setPlayerCount] = useState(0);
   const [lastAction, setLastAction] = useState<string>("");
 
+  const [showChat, setShowChat] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectingRef = useRef<boolean>(false);
@@ -331,6 +332,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
   const [error, setError] = useState<string | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ---------- WebSocket URL ----------
   const getWebSocketUrl = useCallback((): string => {
     if (serverUrl && serverUrl.startsWith("ws")) return serverUrl;
     if (ENV_WS && ENV_WS.startsWith("ws")) return ENV_WS;
@@ -338,6 +340,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
     return `${proto}//${window.location.host}/game/ws`;
   }, [serverUrl]);
 
+  // ---------- Connect WebSocket ----------
   const connectWebSocket = useCallback(() => {
     if (
       wsRef.current &&
@@ -409,12 +412,14 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
     }
   }, [getWebSocketUrl]);
 
+  // ---------- Send Message ----------
   const sendMessage = useCallback((message: any) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message));
     }
   }, []);
 
+  // ---------- Keyboard Controls ----------
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
       if (!connected) return;
@@ -459,17 +464,12 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
     [connected, sendMessage]
   );
 
+  // ---------- Lifecycle ----------
   useEffect(() => {
     connectWebSocket();
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-      if (hideTimerRef.current) {
-        clearTimeout(hideTimerRef.current);
-        hideTimerRef.current = null;
-      }
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
       try {
         wsRef.current?.close();
         wsRef.current = null;
@@ -482,6 +482,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
     return () => window.removeEventListener("keydown", handleKeyPress);
   }, [handleKeyPress]);
 
+  // ---------- Render Voxel Grid ----------
   const renderGrid = () => {
     if (!gameState) return null;
     const cells: JSX.Element[] = [];
@@ -515,40 +516,17 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
     return cells;
   };
 
+  // ---------- UI ----------
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            Voxel World
-          </h1>
-          <p className="text-slate-300 text-lg">A multiplayer voxel playground where colors come alive</p>
-        </div>
-
-        <div className="flex justify-center items-center gap-6 mb-8">
-          <div
-            className={`flex items-center gap-2 px-4 py-2 rounded-full ${
-              connected ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"
-            }`}
-          >
-            {connected ? <Wifi size={18} /> : <WifiOff size={18} />}
-            <span className="font-medium">{connected ? "Connected" : "Connecting..."}</span>
-          </div>
-
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-300">
-            <Users size={18} />
-            <span className="font-medium">{playerCount} Players</span>
-          </div>
-
-          {lastAction && (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 text-purple-300 animate-pulse">
-              <Gamepad2 size={18} />
-              <span className="font-medium">{lastAction}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-center mb-8">
+    <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
+      {/* MAIN LAYOUT */}
+      <div className="flex h-screen">
+        {/* --- GAME SIDE --- */}
+        <div
+          className={`transition-all duration-500 ${
+            showChat ? "w-1/2" : "w-full"
+          } flex justify-center items-center`}
+        >
           {gameState ? (
             <div
               className="voxel-grid bg-slate-800/50 p-4 rounded-2xl backdrop-blur-sm border border-slate-700/50 shadow-2xl"
@@ -563,98 +541,65 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
               {renderGrid()}
             </div>
           ) : (
-            <div className="flex items-center justify-center w-96 h-96 bg-slate-800/50 rounded-2xl backdrop-blur-sm border border-slate-700/50">
-              <div className="text-center">
-                <div className="animate-spin w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full mx-auto mb-4" />
-                <p className="text-slate-400">Connecting to voxel world...</p>
-              </div>
-            </div>
+            <div className="text-slate-400">Connecting to voxel world...</div>
           )}
         </div>
 
-        {showMessageInput && (
-          <MessageInput
-            onSubmit={(content: string) => {
-              sendMessage({ k: "m", content });
-              setShowMessageInput(false);
-            }}
-            onClose={() => setShowMessageInput(false)}
-          />
-        )}
-
-        {currentMessage && <MessageBubble message={currentMessage} />}
-
-        {error && (
-          <div className="fixed top-4 right-4 bg-red-50 text-red-600 px-4 py-3 rounded-lg shadow-lg border border-red-200 animate-fade-in">
-            {error}
-          </div>
-        )}
-
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-2xl font-semibold mb-6 text-center flex items-center justify-center gap-2">
-            <Gamepad2 className="text-purple-400" />
-            Controls
-          </h2>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
-              <h3 className="text-lg font-semibold mb-4 text-blue-300">Movement</h3>
-              <div className="space-y-2 text-slate-300">
-                <p>
-                  <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">↑</kbd>{" "}
-                  <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">W</kbd> Move Up
-                </p>
-                <p>
-                  <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">↓</kbd>{" "}
-                  <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">S</kbd> Move Down
-                </p>
-                <p>
-                  <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">←</kbd>{" "}
-                  <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">A</kbd> Move Left
-                </p>
-                <p>
-                  <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">→</kbd>{" "}
-                  <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">D</kbd> Move Right
-                </p>
-              </div>
+        {/* --- CHAT SIDE --- */}
+        <div
+          className={`transition-all duration-500 ${
+            showChat ? "w-1/2 opacity-100" : "w-0 opacity-0 pointer-events-none"
+          } bg-slate-900 text-white shadow-2xl overflow-hidden border-l border-slate-800`}
+        >
+          {showChat && (
+            <div className="h-full w-full relative">
+              <ChatRoot onClose={() => setShowChat(false)} />
             </div>
-
-            <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
-              <h3 className="text-lg font-semibold mb-4 text-purple-300 flex items-center gap-2">
-                <Palette size={18} />
-                Colors
-              </h3>
-              <div className="space-y-2 text-slate-300">
-                <p>
-                  <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">C</kbd> Cycle Color
-                </p>
-                <p className="text-sm text-slate-400 mt-2">
-                  Press C to cycle through 64 different color combinations
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 mt-6">
-            <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
-              <h3 className="text-lg font-semibold mb-4 text-purple-300 flex items-center gap-2">
-                <MessageCircle size={18} />
-                Messages
-              </h3>
-              <div className="space-y-2 text-slate-300">
-                <p>
-                  <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">M</kbd> Write Message
-                </p>
-                <p className="text-sm text-slate-400 mt-2">
-                  Press M to leave a message at your current position
-                </p>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
-
-        <div className="text-center mt-12 text-slate-400" />
       </div>
+
+      {/* --- FLOAT BUTTON --- */}
+      <button
+        onClick={() => setShowChat((prev) => !prev)}
+        className="absolute top-6 right-6 bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-full shadow-xl transition-all"
+        title={showChat ? "Close Chat" : "Open Chat"}
+      >
+        {showChat ? <X size={22} /> : <MessageCircle size={22} />}
+      </button>
+
+      {/* --- STATUS --- */}
+      <div className="absolute bottom-4 left-4 text-sm text-slate-300 flex items-center gap-3">
+        {connected ? (
+          <Wifi className="text-green-400" size={16} />
+        ) : (
+          <WifiOff className="text-red-400" size={16} />
+        )}
+        <span>
+          {connected ? "Connected" : "Disconnected"} • {playerCount} players
+        </span>
+      </div>
+
+      {/* --- MESSAGE INPUT --- */}
+      {showMessageInput && (
+        <MessageInput
+          onSubmit={(content: string) => {
+            sendMessage({ k: "m", content });
+            setShowMessageInput(false);
+          }}
+          onClose={() => setShowMessageInput(false)}
+        />
+      )}
+
+      {/* --- MESSAGE BUBBLE --- */}
+      {currentMessage && <MessageBubble message={currentMessage} />}
+
+      {/* --- ERROR POPUP --- */}
+      {error && (
+        <div className="fixed top-4 right-4 bg-red-50 text-red-600 px-4 py-3 rounded-lg shadow-lg border border-red-200 animate-fade-in">
+          {error}
+        </div>
+      )}
     </div>
   );
 };

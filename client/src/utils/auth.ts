@@ -2,6 +2,7 @@ import type { User } from "../types/auth";
 
 const TOKEN_KEY = "auth_token";
 const USER_KEY = "auth_user";
+const PLAYER_ID = "player_id"
 
 export const authStorage = {
   getToken(): string | null {
@@ -27,6 +28,10 @@ export const authStorage = {
 
   setUser(user: User): void {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
+  },
+
+  setID(id:  string):void{
+      localStorage.setItem(PLAYER_ID,id)
   },
 
   removeUser(): void {

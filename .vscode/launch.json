@@ -65,16 +65,35 @@
       "justMyCode": false,
       "subProcess": true,
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Debug Chat Server (uvicorn)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "services.chat.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000",
+        "--reload"
+      ],
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false,
+      "subProcess": true,
+      "console": "integratedTerminal"
     }
   ],
   "compounds": [
     {
-      "name": "Debug Full Stack (client+edge+auth+game+browser)",
+      "name": "Debug Full Stack (client+edge+auth+game+chat+browser)",
       "configurations": [
         "Run Client (npm)",
         "Run Edge (npm)",
         "Debug Auth Server (uvicorn)",
         "Debug Game Server (uvicorn)",
+        "Debug Chat Server (uvicorn)",
         "Open Client in Chrome"
       ]
     }

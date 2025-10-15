@@ -1,5 +1,5 @@
 export interface User {
-  id: number;
+  id: string;
   username: string;
   email: string;
 }
@@ -18,6 +18,7 @@ export interface AuthResponse {
   ok: boolean;
   user: User;
   token?: string;
+  player_id:string
 }
 
 export interface RegisterResponse {
