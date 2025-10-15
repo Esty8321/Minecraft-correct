@@ -1,9 +1,17 @@
 // import React, { useEffect, useState, useCallback, useRef } from "react";
+<<<<<<< HEAD
 // import { Wifi, WifiOff, Users, Gamepad2, Palette, MessageCircle, X } from "lucide-react";
 // import { authStorage } from "../utils/auth";
 // import { MessageBubble } from "./MessageBubble";
 // import { MessageInput } from "./MessageInput";
 // import ChatPanel from "./Chat/ChatPanel";
+=======
+// import { Wifi, WifiOff, Users, Gamepad2, Palette, MessageCircle } from "lucide-react";
+// import { authStorage } from "../utils/auth";
+// import { MessageBubble } from "./MessageBubble";
+// import { MessageInput } from "./MessageInput";
+
+>>>>>>> 730ee61ea16c74b1b474abef342bb3b9cd588d49
 // const ENV_WS = (import.meta as any).env?.VITE_GAME_WS as string | undefined;
 
 // interface GameState {
@@ -22,6 +30,7 @@
 //   const [connected, setConnected] = useState(false);
 //   const [playerCount, setPlayerCount] = useState(0);
 //   const [lastAction, setLastAction] = useState<string>("");
+//   const [notice, setNotice] = useState<string | null>(null);
 
 //   const [showChat, setShowChat] = useState(false)
 //   const wsRef = useRef<WebSocket | null>(null);
@@ -89,6 +98,14 @@
 //             setError("Oops! This spot already has a message! 📫");
 //             setTimeout(() => setError(null), 3000);
 //           }
+<<<<<<< HEAD
+=======
+//           else if (data.type === "announcement" && data.data?.text) {
+//             setNotice(String(data.data.text));
+//            setTimeout(() => setNotice(null), 3000);
+//         }
+
+>>>>>>> 730ee61ea16c74b1b474abef342bb3b9cd588d49
 //         } catch {}
 //       };
 
@@ -217,12 +234,54 @@
 //     return cells;
 //   };
 
+<<<<<<< HEAD
 // return (
 //     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
 //       {/* GAME + CHAT SPLIT */}
 //       <div className="flex h-screen">
 //         {/* --- GAME SIDE --- */}
 //         <div className={`transition-all duration-500 ${showChat ? "w-1/2" : "w-full"} flex justify-center items-center`}>
+=======
+//   return (
+//     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
+//       <div className="container mx-auto px-4 py-8">
+//         <div className="text-center mb-8">
+//           <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+//             Voxel World
+//           </h1>
+//           <p className="text-slate-300 text-lg">A multiplayer voxel playground where colors come alive</p>
+//         </div>
+        
+//         {notice && (
+//           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-blue-50 text-blue-700 px-4 py-3 rounded-lg shadow-lg border border-blue-200">
+//             {notice}
+//           </div>
+//        )}
+//         <div className="flex justify-center items-center gap-6 mb-8">
+//           <div
+//             className={`flex items-center gap-2 px-4 py-2 rounded-full ${
+//               connected ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"
+//             }`}
+//           >
+//             {connected ? <Wifi size={18} /> : <WifiOff size={18} />}
+//             <span className="font-medium">{connected ? "Connected" : "Connecting..."}</span>
+//           </div>
+
+//           <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-300">
+//             <Users size={18} />
+//             <span className="font-medium">{playerCount} Players</span>
+//           </div>
+
+//           {lastAction && (
+//             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 text-purple-300 animate-pulse">
+//               <Gamepad2 size={18} />
+//               <span className="font-medium">{lastAction}</span>
+//             </div>
+//           )}
+//         </div>
+
+//         <div className="flex justify-center mb-8">
+>>>>>>> 730ee61ea16c74b1b474abef342bb3b9cd588d49
 //           {gameState ? (
 //             <div
 //               className="voxel-grid bg-slate-800/50 p-4 rounded-2xl backdrop-blur-sm border border-slate-700/50 shadow-2xl"
@@ -241,6 +300,7 @@
 //           )}
 //         </div>
 
+<<<<<<< HEAD
 //         {/* --- CHAT SIDE --- */}
 //         <div
 //           className={`transition-all duration-500 bg-gray-50 text-black ${
@@ -248,6 +308,87 @@
 //           } shadow-lg overflow-hidden`}
 //         >
 //           <ChatPanel />
+=======
+//         {showMessageInput && (
+//           <MessageInput
+//             onSubmit={(content: string) => {
+//               sendMessage({ k: "m", content });
+//               setShowMessageInput(false);
+//             }}
+//             onClose={() => setShowMessageInput(false)}
+//           />
+//         )}
+
+//         {currentMessage && <MessageBubble message={currentMessage} />}
+
+//         {error && (
+//           <div className="fixed top-4 right-4 bg-red-50 text-red-600 px-4 py-3 rounded-lg shadow-lg border border-red-200 animate-fade-in">
+//             {error}
+//           </div>
+//         )}
+
+//         <div className="max-w-2xl mx-auto">
+//           <h2 className="text-2xl font-semibold mb-6 text-center flex items-center justify-center gap-2">
+//             <Gamepad2 className="text-purple-400" />
+//             Controls
+//           </h2>
+
+//           <div className="grid md:grid-cols-2 gap-6">
+//             <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
+//               <h3 className="text-lg font-semibold mb-4 text-blue-300">Movement</h3>
+//               <div className="space-y-2 text-slate-300">
+//                 <p>
+//                   <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">↑</kbd>{" "}
+//                   <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">W</kbd> Move Up
+//                 </p>
+//                 <p>
+//                   <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">↓</kbd>{" "}
+//                   <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">S</kbd> Move Down
+//                 </p>
+//                 <p>
+//                   <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">←</kbd>{" "}
+//                   <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">A</kbd> Move Left
+//                 </p>
+//                 <p>
+//                   <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">→</kbd>{" "}
+//                   <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">D</kbd> Move Right
+//                 </p>
+//               </div>
+//             </div>
+
+//             <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
+//               <h3 className="text-lg font-semibold mb-4 text-purple-300 flex items-center gap-2">
+//                 <Palette size={18} />
+//                 Colors
+//               </h3>
+//               <div className="space-y-2 text-slate-300">
+//                 <p>
+//                   <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">C</kbd> Cycle Color
+//                 </p>
+//                 <p className="text-sm text-slate-400 mt-2">
+//                   Press C to cycle through 64 different color combinations
+//                 </p>
+//               </div>
+//             </div>
+//           </div>
+
+//           <div className="grid md:grid-cols-2 gap-6 mt-6">
+//             <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
+//               <h3 className="text-lg font-semibold mb-4 text-purple-300 flex items-center gap-2">
+//                 <MessageCircle size={18} />
+//                 Messages
+//               </h3>
+//               <div className="space-y-2 text-slate-300">
+//                 <p>
+//                   <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">M</kbd> Write Message
+//                 </p>
+//                 <p className="text-sm text-slate-400 mt-2">
+//                   Press M to leave a message at your current position
+//                 </p>
+//               </div>
+//             </div>
+//           </div>
+>>>>>>> 730ee61ea16c74b1b474abef342bb3b9cd588d49
 //         </div>
 //       </div>
 
@@ -289,9 +430,12 @@
 // };
 
 // export default VoxelGrid;
+<<<<<<< HEAD
 
 
 
+=======
+>>>>>>> 730ee61ea16c74b1b474abef342bb3b9cd588d49
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Wifi,
@@ -321,6 +465,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
   const [connected, setConnected] = useState(false);
   const [playerCount, setPlayerCount] = useState(0);
   const [lastAction, setLastAction] = useState<string>("");
+  const [notice, setNotice] = useState<string | null>(null);
 
   const [showChat, setShowChat] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -342,14 +487,9 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
 
   // ---------- Connect WebSocket ----------
   const connectWebSocket = useCallback(() => {
-    if (
-      wsRef.current &&
-      (wsRef.current.readyState === WebSocket.OPEN ||
-        wsRef.current.readyState === WebSocket.CONNECTING)
-    ) {
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
       return;
     }
-
     try {
       const base = getWebSocketUrl();
       const token = authStorage.getToken?.() ?? localStorage.getItem("token") ?? "";
@@ -361,21 +501,14 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
 
       ws.onopen = () => {
         setConnected(true);
-        try {
-          ws.send(JSON.stringify({ k: "whereami" }));
-        } catch {}
+        try { ws.send(JSON.stringify({ k: "whereami" })); } catch {}
       };
 
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
           if (data.type === "matrix") {
-            setGameState({
-              w: data.w,
-              h: data.h,
-              data: data.data,
-              chunk_id: data.chunk_id,
-            });
+            setGameState({ w: data.w, h: data.h, data: data.data, chunk_id: data.chunk_id });
             if (Array.isArray(data.data)) {
               const players = data.data.filter((cell: number) => (cell & 1) === 1);
               setPlayerCount(players.length);
@@ -389,6 +522,9 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
           } else if (data.type === "error" && data.code === "SPACE_OCCUPIED") {
             setError("Oops! This spot already has a message! 📫");
             setTimeout(() => setError(null), 3000);
+          } else if (data.type === "announcement" && data.data?.text) {
+            setNotice(String(data.data.text));
+            setTimeout(() => setNotice(null), 3000);
           }
         } catch {}
       };
@@ -423,6 +559,15 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
       if (!connected) return;
+
+      if (showMessageInput) {
+        if (event.key === "Escape") {
+          setShowMessageInput(false);
+          event.preventDefault();
+        }
+        return;
+      }
+
       const key = event.key.toLowerCase();
       let action = "";
       switch (key) {
@@ -461,7 +606,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
         event.preventDefault();
       }
     },
-    [connected, sendMessage]
+    [connected, sendMessage, showMessageInput]
   );
 
   // ---------- Lifecycle ----------
@@ -478,8 +623,9 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
   }, [connectWebSocket]);
 
   useEffect(() => {
-    window.addEventListener("keydown", handleKeyPress);
-    return () => window.removeEventListener("keydown", handleKeyPress);
+    const onKeyDown = (e: KeyboardEvent) => handleKeyPress(e);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [handleKeyPress]);
 
   // ---------- Render Voxel Grid ----------
@@ -518,6 +664,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
 
   // ---------- UI ----------
   return (
+<<<<<<< HEAD
     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
       {/* MAIN LAYOUT */}
       <div className="flex h-screen">
@@ -527,6 +674,43 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
             showChat ? "w-1/2" : "w-full"
           } flex justify-center items-center`}
         >
+=======
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            Voxel World
+          </h1>
+          <p className="text-slate-300 text-lg">A multiplayer voxel playground where colors come alive</p>
+        </div>
+
+        {notice && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-blue-50 text-blue-700 px-4 py-3 rounded-lg shadow-lg border border-blue-200">
+            {notice}
+          </div>
+        )}
+
+        <div className="flex justify-center items-center gap-6 mb-8">
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${connected ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"}`}>
+            {connected ? <Wifi size={18} /> : <WifiOff size={18} />}
+            <span className="font-medium">{connected ? "Connected" : "Connecting..."}</span>
+          </div>
+
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-300">
+            <Users size={18} />
+            <span className="font-medium">{playerCount} Players</span>
+          </div>
+
+          {lastAction && (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 text-purple-300 animate-pulse">
+              <Gamepad2 size={18} />
+              <span className="font-medium">{lastAction}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-center mb-8">
+>>>>>>> 730ee61ea16c74b1b474abef342bb3b9cd588d49
           {gameState ? (
             <div
               className="voxel-grid bg-slate-800/50 p-4 rounded-2xl backdrop-blur-sm border border-slate-700/50 shadow-2xl"
@@ -555,7 +739,39 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
             <div className="h-full w-full relative">
               <ChatRoot onClose={() => setShowChat(false)} />
             </div>
+<<<<<<< HEAD
           )}
+=======
+
+            <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
+              <h3 className="text-lg font-semibold mb-4 text-purple-300 flex items-center gap-2">
+                <Palette size={18} />
+                Colors
+              </h3>
+              <div className="space-y-2 text-slate-300">
+                <p>
+                  <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">C</kbd> Cycle Color
+                </p>
+                <p className="text-sm text-slate-400 mt-2">Press C to cycle through 64 different color combinations</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6 mt-6">
+            <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
+              <h3 className="text-lg font-semibold mb-4 text-purple-300 flex items-center gap-2">
+                <MessageCircle size={18} />
+                Messages
+              </h3>
+              <div className="space-y-2 text-slate-300">
+                <p>
+                  <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">M</kbd> Write Message
+                </p>
+                <p className="text-sm text-slate-400 mt-2">Press M to leave a message at your current position</p>
+              </div>
+            </div>
+          </div>
+>>>>>>> 730ee61ea16c74b1b474abef342bb3b9cd588d49
         </div>
       </div>
 
