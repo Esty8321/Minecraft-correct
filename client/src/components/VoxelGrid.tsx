@@ -94,6 +94,9 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
               data: data.data,
               chunk_id: data.chunk_id,
             });
+            if (data.chunk_id) {
+              sessionStorage.setItem("current_chunk_id", String(data.chunk_id));
+            }
             // fallback: אם אין total_players, נספור לוקלית
             if (typeof data.total_players !== "number") {
               const players = data.data.filter((cell: number) => (cell & 1) === 1);
@@ -332,7 +335,11 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
         >
           {showChat && (
             <div className="h-full w-full relative">
-              <ChatRoot onClose={() => setShowChat(false)} />
+                <ChatRoot
+                  onClose={() => setShowChat(false)}
+                  playerId={authStorage.getUser()?.id ?? ""}
+                  currentChunkId={gameState?.chunk_id ?? sessionStorage.getItem("current_chunk_id") ?? null}
+                />
             </div>
           )}
         </div>

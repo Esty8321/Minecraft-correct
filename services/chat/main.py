@@ -8,6 +8,7 @@ import asyncio
 import json
 import os
 import httpx
+from services.game.db_history import append_player_action, TOKEN_DM
 
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://127.0.0.1:7001")
 
@@ -411,6 +412,17 @@ async def chat_endpoint(websocket: WebSocket):
                     continue
 
                 saved = append_message(player_id, partner, text, data.get("timestamp"), quoted_id=quoted_id)
+
+
+                chunk_id = data.get("chunkId")  # ← מגיע מהקליינט בצ'אט הפרטי
+                if isinstance(chunk_id, str) and chunk_id:
+                    try:
+                        append_player_action(player_id, chunk_id, TOKEN_DM)
+                    except Exception as e:
+                        print(f"[CHAT] Failed to append DM action for {player_id} on {chunk_id}: {e}")
+                else:
+                    print(f"[CHAT] DM without chunkId from {player_id}; history not recorded")
+
 
                 # payload לכולם (כולל שדות תצוגה ומידע על הציטוט)
                 msg_payload = _minimal_view(saved)  # כולל quotedId + quoted_message snippet אם אפשר
