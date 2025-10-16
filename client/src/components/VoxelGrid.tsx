@@ -66,19 +66,22 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
         setConnected(true);
         try {
           ws.send(JSON.stringify({ k: "whereami" }));
-        } catch {}
+        } catch { }
       };
 
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          setPlayerCount(data.total_players);
           if (data.type === "matrix") {
             setGameState({ w: data.w, h: data.h, data: data.data, chunk_id: data.chunk_id });
             if (Array.isArray(data.data)) {
               const players = data.data.filter((cell: number) => (cell & 1) === 1);
-              setPlayerCount(players.length);
+              console.log("data--", data);
+              console.log("number of players: ", players);
+
+              // setPlayerCount(players.length);
             } else if (typeof data.total_players === "number") {
-              setPlayerCount(data.total_players);
             }
           } else if (data.type === "message" && data.data) {
             setCurrentMessage(data.data);
@@ -91,7 +94,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
             setNotice(String(data.data.text));
             setTimeout(() => setNotice(null), 3000);
           }
-        } catch {}
+        } catch { }
       };
 
       ws.onclose = () => {
@@ -120,10 +123,22 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
     }
   }, []);
 
+
+  // Check if user is typing in any input, textarea, or contenteditable element
+  function isTypingInInput(): boolean {
+    const active = document.activeElement as HTMLElement | null;
+    if (!active) return false;
+    const tag = active.tagName.toLowerCase();
+    const editable = active.getAttribute("contenteditable");
+    return tag === "input" || tag === "textarea" || editable === "true";
+  }
+
+
   // ---------- Keyboard Controls ----------
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
       if (!connected) return;
+      if (isTypingInInput()) return; // 🛑 ignore key presses while typing
 
       if (showMessageInput) {
         if (event.key === "Escape") {
@@ -183,7 +198,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
       try {
         wsRef.current?.close();
         wsRef.current = null;
-      } catch {}
+      } catch { }
     };
   }, [connectWebSocket]);
 
@@ -230,12 +245,11 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
   // ---------- UI ----------
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
-      <div className="flex h-screen">
+      <div className="flex flex-row-reverse h-screen">
         {/* --- GAME SIDE --- */}
         <div
-          className={`transition-all duration-500 ${
-            showChat ? "w-1/2" : "w-full"
-          } flex justify-center items-center`}
+          className={`transition-all duration-500 ${showChat ? "w-3/4" : "w-full"
+            } flex justify-center items-center`}
         >
           {gameState ? (
             <div
@@ -255,11 +269,12 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
           )}
         </div>
 
-        {/* --- CHAT SIDE --- */}
+        {/* --- CHAT SIDE (right) --- */}
         <div
-          className={`transition-all duration-500 ${
-            showChat ? "w-1/2 opacity-100" : "w-0 opacity-0 pointer-events-none"
-          } bg-slate-900 text-white shadow-2xl overflow-hidden border-l border-slate-800`}
+          className={`transition-all duration-500 ${showChat
+            ? "w-1/4 opacity-100"
+            : "w-0 opacity-0 pointer-events-none"
+            } bg-slate-900 text-white shadow-2xl overflow-hidden border-l border-slate-800`}
         >
           {showChat && (
             <div className="h-full w-full relative">
@@ -268,6 +283,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
           )}
         </div>
       </div>
+
 
       {/* --- FLOAT BUTTON --- */}
       <button
@@ -278,11 +294,21 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
         {showChat ? <X size={22} /> : <MessageCircle size={22} />}
       </button>
 
-      {/* --- STATUS --- */}
-      <div className="absolute bottom-4 left-4 text-sm text-slate-300 flex items-center gap-3">
-        {connected ? <Wifi className="text-green-400" size={16} /> : <WifiOff className="text-red-400" size={16} />}
-        <span>{connected ? "Connected" : "Disconnected"} • {playerCount} players</span>
+      {/* --- STATUS (bottom-left of the whole screen) --- */}
+      <div
+        className="fixed bottom-4 left-4 z-[9999] text-sm text-slate-300 flex items-center gap-3 bg-slate-800/70 px-3 py-2 rounded-md backdrop-blur-sm border border-slate-700/50 shadow-lg"
+        style={{ position: "fixed", left: "1rem", bottom: "1rem" }}
+      >
+        {connected ? (
+          <Wifi className="text-green-400" size={16} />
+        ) : (
+          <WifiOff className="text-red-400" size={16} />
+        )}
+        <span>
+          {connected ? "Connected" : "Disconnected"} • {playerCount} players
+        </span>
       </div>
+
 
       {showMessageInput && (
         <MessageInput
