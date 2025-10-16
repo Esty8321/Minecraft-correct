@@ -7,12 +7,19 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Set, Tuple, Literal, TypedDict
 import torch
 from fastapi import WebSocket
+
 from .settings import BIT_HAS_LINK, W, H, DTYPE, BIT_IS_PLAYER
 from .bits import set_bit, get_bit, make_color, with_player, without_player
 from .ids import chunk_id_from_coords, coords_from_chunk_id
 from .db import load_message, save_chunk, load_chunk, save_message
 from .models import Message
 from .players_db import get_player_position, save_player_position
+
+from services.game.db_history import (
+    append_player_action,
+    TOKEN_RIGHT, TOKEN_LEFT, TOKEN_UP, TOKEN_DOWN, TOKEN_COLOR,
+)
+
 
 LOGGER = logging.getLogger("voxel-hub")
 if not LOGGER.handlers:
@@ -164,7 +171,18 @@ class Hub:
         async with self._lock:
             state = self._state_by_ws[ws]
             board = self._ensure_chunk(state.chunk_id)
+
+            if dr == 0 and dc == 1:
+                tok = TOKEN_RIGHT
+            elif dr == 0 and dc == -1:
+                tok = TOKEN_LEFT
+            elif dr == -1 and dc == 0:
+                tok = TOKEN_UP
+            else:
+                tok = TOKEN_DOWN
+
             nr, nc = state.pos.row + dr, state.pos.col + dc
+
             if 0 <= nr < H and 0 <= nc < W:
                 if self._is_empty_cell(board, nr, nc):
                     board[state.pos.row, state.pos.col] = state.underlying_cell
@@ -175,9 +193,13 @@ class Hub:
                         new_visible = set_bit(new_visible, BIT_HAS_LINK, True)
                     board[nr, nc] = new_visible
                     save_chunk(state.chunk_id, board)
+
                     state.pos = Coord(nr, nc)
                     state.underlying_cell = new_underlying
                     state.visible_cell = new_visible
+
+                    append_player_action(self._player_id(ws), state.chunk_id, tok)
+
                     await self._broadcast_chunk(state.chunk_id)
                     await self._maybe_send_message_at(ws)
                     
@@ -187,19 +209,21 @@ class Hub:
                         save_player_position(user_id, state.chunk_id, state.pos.row, state.pos.col)
                 return
             user_id = self._user_id_by_ws.get(ws)
-            print("the user id is:", user_id)
             if user_id:
                 save_player_position(user_id,state.chunk_id, state.pos.row, state.pos.col)
+           
             if nr < 0:
-                direction = "up"
+                direction: Direction = "up"
             elif nr >= H:
                 direction = "down"
             elif nc < 0:
                 direction = "left"
             else:
                 direction = "right"
+
             new_chunk_id = self._neighbor_chunk_id(state.chunk_id, direction)
             new_board = self._ensure_chunk(new_chunk_id)
+
             if direction == "up":
                 target = Coord(H - 1, state.pos.col)
             elif direction == "down":
@@ -208,9 +232,11 @@ class Hub:
                 target = Coord(state.pos.row, W - 1)
             else:
                 target = Coord(state.pos.row, 0)
+
             if self._is_empty_cell(new_board, target.row, target.col):
                 board[state.pos.row, state.pos.col] = state.underlying_cell
                 save_chunk(state.chunk_id, board)
+
                 dest_before = new_board[target.row, target.col]
                 new_underlying = without_player(dest_before)
                 new_visible = with_player(state.color)
@@ -218,14 +244,19 @@ class Hub:
                     new_visible = set_bit(new_visible, BIT_HAS_LINK, True)
                 new_board[target.row, target.col] = new_visible
                 save_chunk(new_chunk_id, new_board)
+
                 self._chunk_watchers.setdefault(new_chunk_id, set()).add(ws)
                 self._chunk_watchers.get(state.chunk_id, set()).discard(ws)
+
                 old_chunk = state.chunk_id
                 state.chunk_id = new_chunk_id
                 state.pos = target
                 state.underlying_cell = new_underlying
                 state.visible_cell = new_visible
-                
+
+
+                append_player_action(self._player_id(ws), state.chunk_id, tok)
+
                 await self._broadcast_chunk(old_chunk)
                 await self._broadcast_chunk(new_chunk_id)
                 await self._maybe_send_message_at(ws)
@@ -240,6 +271,9 @@ class Hub:
             state.underlying_cell = new_color
             board[state.pos.row, state.pos.col] = with_player(new_color)
             save_chunk(state.chunk_id, board)
+
+            append_player_action(self._player_id(ws), state.chunk_id, TOKEN_COLOR)
+
             await self._broadcast_chunk(state.chunk_id)
 
     async def _send_chunk(self, ws: WebSocket) -> None:
@@ -304,6 +338,9 @@ class Hub:
         else:
             self._last_msg_pos_by_ws[ws] = None
 
+    async def check_for_message(self, ws: WebSocket) -> None:
+        await self._maybe_send_message_at(ws)
+
     async def write_message(self, ws: WebSocket, content: str) -> None:
         async with self._lock:
             try:
@@ -317,7 +354,12 @@ class Hub:
                         "message": "This spot already has a message!"
                     }))
                     return
-                message = Message(content=content, author=str(id(ws)), chunk_id=state.chunk_id, position=(state.pos.row, state.pos.col))
+                message = Message(
+                    content=content,
+                    author=str(id(ws)),
+                    chunk_id=state.chunk_id,
+                    position=(state.pos.row, state.pos.col)
+                )
                 save_message(message)
                 board[state.pos.row, state.pos.col] = set_bit(board[state.pos.row, state.pos.col], BIT_HAS_LINK, True)
                 state.underlying_cell = set_bit(state.underlying_cell, BIT_HAS_LINK, True)
@@ -337,5 +379,5 @@ class Hub:
             except Exception as e:
                 LOGGER.debug("send announcement failed: %r", e)
 
-
-        
+    def _player_id(self, ws: WebSocket) -> str:
+        return f"ws-{id(ws)}"##??fix this funcion

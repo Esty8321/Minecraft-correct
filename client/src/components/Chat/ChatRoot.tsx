@@ -8,9 +8,11 @@ import type { ChatTheme } from "../../types";
 
 interface ChatRootProps {
     onClose?: () => void;
+    playerId: string;
+    currentChunkId?: string | null;
 }
 
-const ChatRoot: React.FC<ChatRootProps> = ({ onClose }) => {
+const ChatRoot: React.FC<ChatRootProps> = ({ onClose, playerId, currentChunkId }) => {
     // --- WebSocket & chat logic ---
     const {
         isConnected,
@@ -94,7 +96,15 @@ const ChatRoot: React.FC<ChatRootProps> = ({ onClose }) => {
                 messages={messages}
                 selectedPlayer={selectedPlayer}
                 currentPlayerId={currentPlayerId || ""}
-                onSendMessage={sendMessage}
+                // onSendMessage={sendMessage}
+                onSendMessage={(text, quoted) => {
+                  const chunkId =
+                  
+                    currentChunkId ??
+                    sessionStorage.getItem("current_chunk_id") ??
+                    null;
+                (sendMessage as any)(text, quoted, { chunkId }); 
+                }}
                 onReactMessage={reactToMessage}   // ✅ correct name
                 onDeleteMessage={deleteMessage}   // ✅ soft delete
                 showEmojiPicker={showEmojiPicker}
