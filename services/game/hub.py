@@ -380,4 +380,9 @@ class Hub:
                 LOGGER.debug("send announcement failed: %r", e)
 
     def _player_id(self, ws: WebSocket) -> str:
-        return f"ws-{id(ws)}"##??fix this funcion
+
+        if hasattr(self, "_user_id_by_ws"):
+            user_id = self._user_id_by_ws.get(ws)
+            if user_id and user_id != "unknown":
+                return user_id
+        return f"ws-{id(ws)}"
