@@ -55,7 +55,8 @@
           "quoted_id": null,
           "reactions": {},
           "read_by": [
-            "00000010"
+            "00000010",
+            "00000000"
           ],
           "deleted": false
         },
@@ -94,7 +95,8 @@
           "quoted_id": null,
           "reactions": {},
           "read_by": [
-            "00000010"
+            "00000010",
+            "00000000"
           ],
           "deleted": false
         },
@@ -107,7 +109,76 @@
           "quoted_id": null,
           "reactions": {},
           "read_by": [
+            "00000010",
+            "00000000"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T07:54:18.149Z|00000010|hiii!",
+          "from": "00000010",
+          "to": "00000000",
+          "message": "hiii!",
+          "timestamp": "2025-10-16T07:54:18.149Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T07:54:42.733Z|00000100|jjj",
+          "from": "00000100",
+          "to": "00000010",
+          "message": "jjj",
+          "timestamp": "2025-10-16T07:54:42.733Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000100"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T07:55:44.081Z|00000010|🙃",
+          "from": "00000010",
+          "to": "00000000",
+          "message": "🙃",
+          "timestamp": "2025-10-16T07:55:44.081Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T08:03:52.227Z|00000000|hi back!",
+          "from": "00000000",
+          "to": "00000010",
+          "message": "hi back!",
+          "timestamp": "2025-10-16T08:03:52.227Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000000",
             "00000010"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T08:08:16.761Z|00000000|hhh",
+          "from": "00000000",
+          "to": "00000001",
+          "message": "hhh",
+          "timestamp": "2025-10-16T08:08:16.761Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000000"
           ],
           "deleted": false
         }
