@@ -57,6 +57,7 @@ export default function LoginForm({ onSuccess, onDone }: LoginFormProps) {
         // Save token synchronously to storage
         authStorage.setToken(response.token);
         authStorage.setUser(response.user);
+        authStorage.setID(response.player_id)
         console.log("[LoginForm] token saved to storage");
 
         // Callback for any parent logic

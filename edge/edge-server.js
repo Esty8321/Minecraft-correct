@@ -12,10 +12,10 @@ const JWT_SECRET = process.env.AUTH_JWT_SECRET || 'CHANGE_ME_123456789';
 const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://127.0.0.1:7001';
 const GAME_SERVICE_URL = process.env.GAME_SERVICE_URL || 'http://127.0.0.1:7002';
 const FRONTEND_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
+const CHAT_SERVICE_URL = process.env.CHAT_SERVICE_URL || 'http://127.0.0.1:8000';
 
 const app = express();
 
-// --------------------- CORS ---------------------
 app.use(cors({
   origin: FRONTEND_ORIGIN,
   credentials: true,
@@ -23,7 +23,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// handle preflight requests
 app.options('*', cors({
   origin: FRONTEND_ORIGIN,
   credentials: true,
@@ -31,16 +30,11 @@ app.options('*', cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// --------------------- Logging ---------------------
 app.use((req, res, next) => {
   console.log('[EDGE][INCOMING]', req.method, req.url, 'origin=', req.headers.origin, 'host=', req.headers.host);
   next();
 });
 
-// --------------------- JSON parser ---------------------
-// app.use(express.json());
-
-// --------------------- Token helpers ---------------------
 function getTokenFromReq(req) {
   try {
     const hdr = (req.headers && (req.headers.authorization || req.headers.Authorization)) || '';
@@ -51,12 +45,13 @@ function getTokenFromReq(req) {
     if (req.url) {
       const full = req.url.startsWith('http') ? req.url : `http://localhost${req.url}`;
       const u = new URL(full);
-      console.log("u--   ",u);
-      
+      console.log("u--   ", u);
+
       return u.searchParams.get('token') || null;
     }
-  } catch {console.log("an error in get token--");
-   }
+  } catch {
+    console.log("an error in get token--");
+  }
   return null;
 }
 
@@ -104,25 +99,30 @@ const authProxy = createProxyMiddleware({
 
 app.use('/auth', authProxy);
 
-// --------------------- /game proxy ---------------------
-// const gameProxy = createProxyMiddleware({
-//   target: GAME_SERVICE_URL,
-//   pathRewrite: { '^/game': '/' },
-//   changeOrigin: true,
-//   ws: true,
-//   logLevel: 'debug',
-//   onProxyReqWs: (proxyReq, req, socket, options, head) => {
-//     try {
-//       const token = getTokenFromReq(req);
-//       if (token) proxyReq.setHeader('Authorization', `Bearer ${token}`);
-//       if (proxyReq.getHeader('host')) {
-//         proxyReq.setHeader('host', new URL(GAME_SERVICE_URL).host);
-//       }
-//     } catch (e) {
-//       console.error('[EDGE][WS] onProxyReqWs error', e);
-//     }
-//   }
-// });
+
+// --------------------- /chat proxy ---------------------
+const chatProxy = createProxyMiddleware({
+  target: CHAT_SERVICE_URL,
+  pathRewrite: { '^/chat': '/' },
+  changeOrigin: true,
+  ws: true,
+  logLevel: 'debug',
+  onProxyReqWs: (proxyReq, req, socket) => {
+    try {
+      const full = req.url.startsWith('http')
+        ? req.url
+        : `http://${req.headers.host || 'localhost'}${req.url}`;
+      const u = new URL(full);
+      const token = u.searchParams.get('token');
+      if (token) proxyReq.setHeader('Authorization', `Bearer ${token}`);
+    } catch (err) {
+      console.log('[EDGE][CHAT][WS] error:', err.message);
+    }
+  },
+});
+
+app.use('/chat', chatProxy);
+//end of the chat
 
 const gameProxy = createProxyMiddleware({
   target: GAME_SERVICE_URL,
@@ -160,8 +160,8 @@ const gameProxy = createProxyMiddleware({
       proxyReq.setHeader('host', targetHost);
     } catch (err) {
       console.log('[EDGE][WS] token verify failed:', err?.message || String(err));
-      try { socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n'); } catch {}
-      try { socket.destroy(); } catch {}
+      try { socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n'); } catch { }
+      try { socket.destroy(); } catch { }
     }
   },
 });
@@ -198,6 +198,24 @@ server.on('upgrade', (req, socket, head) => {
       }
       socket.destroy();
       return;
+    }
+    if (req.url && req.url.startsWith('/chat')) {
+      req.url = req.url.replace(/^\/chat/, '') || '/'
+      try {
+        const token = getTokenFromReq(req)
+        if (!token) {
+          socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+          socket.destroy();
+          return;
+        }
+      }
+      catch{}
+
+      if(typeof chatProxy.upgrade == "function"){
+        return chatProxy.upgrade(req, socket, head)
+      }
+      socket.destroy()
+      return
     }
     socket.destroy();
   } catch {

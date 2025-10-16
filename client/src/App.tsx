@@ -8,10 +8,10 @@ import GamePage from "./components/VoxelGrid"; // היה VoxelGrid.tsx – הי�
 import TopBar from "./components/TopBar";
 
 // שמירה על מסלול /game למשתמשים מחוברים בלבד
-function PrivateRoute({ children }: { children: JSX.Element }) {
-  const isAuthed = authStorage.isAuthenticated();
-  return isAuthed ? children : <Navigate to="/auth" replace />;
-}
+// function PrivateRoute({ children }: { children: JSX.Element }) {
+//   const isAuthed = authStorage.isAuthenticated();
+//   return isAuthed ? children : <Navigate to="/auth" replace />;
+// }
 
 // דף התחברות/הרשמה עם טאבים
 function AuthPage() {
