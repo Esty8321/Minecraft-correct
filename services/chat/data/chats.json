@@ -50,14 +50,15 @@
           "id": "2025-10-15T18:48:18.344Z|00000010|ht o you feel",
           "from": "00000010",
           "to": "00000000",
-          "message": "ht o you feel",
+          "message": "",
           "timestamp": "2025-10-15T18:48:18.344Z",
           "quoted_id": null,
           "reactions": {},
           "read_by": [
             "00000010"
           ],
-          "deleted": false
+          "deleted": true,
+          "updated_at": "2025-10-16T08:12:25.805456Z"
         },
         {
           "id": "2025-10-16T06:40:02.670Z|00000010|hi, love you",
@@ -110,6 +111,175 @@
             "00000010"
           ],
           "deleted": false
+        },
+        {
+          "id": "2025-10-16T08:18:24.711Z|00000011|aaaa",
+          "from": "00000011",
+          "to": "00000001",
+          "message": "aaaa",
+          "timestamp": "2025-10-16T08:18:24.711Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000011"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T08:18:31.308Z|00000011|bb",
+          "from": "00000011",
+          "to": "00000001",
+          "message": "bb",
+          "timestamp": "2025-10-16T08:18:31.308Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000011"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T08:18:33.188Z|00000011|ccc",
+          "from": "00000011",
+          "to": "00000001",
+          "message": "ccc",
+          "timestamp": "2025-10-16T08:18:33.188Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000011"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T08:18:50.378Z|00000011|fdf",
+          "from": "00000011",
+          "to": "00000001",
+          "message": "fdf",
+          "timestamp": "2025-10-16T08:18:50.378Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000011"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T08:19:12.194Z|00000011|aaa",
+          "from": "00000011",
+          "to": "00000010",
+          "message": "aaa",
+          "timestamp": "2025-10-16T08:19:12.194Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000011",
+            "00000010"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T08:19:15.230Z|00000011|bbb",
+          "from": "00000011",
+          "to": "00000010",
+          "message": "bbb",
+          "timestamp": "2025-10-16T08:19:15.230Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000011",
+            "00000010"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T08:19:21.490Z|00000011|dffdd",
+          "from": "00000011",
+          "to": "00000010",
+          "message": "dffdd",
+          "timestamp": "2025-10-16T08:19:21.490Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000011",
+            "00000010"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T08:19:27.732Z|00000011|fdfd",
+          "from": "00000011",
+          "to": "00000010",
+          "message": "fdfd",
+          "timestamp": "2025-10-16T08:19:27.732Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000011",
+            "00000010"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T08:21:58.601Z|00000011|aaaa",
+          "from": "00000011",
+          "to": "00000010",
+          "message": "aaaa",
+          "timestamp": "2025-10-16T08:21:58.601Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000011",
+            "00000010"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-16T08:22:00.875Z|00000011|aaaaa",
+          "from": "00000011",
+          "to": "00000010",
+          "message": "",
+          "timestamp": "2025-10-16T08:22:00.875Z",
+          "quoted_id": null,
+          "reactions": {
+            "00000010": "up"
+          },
+          "read_by": [
+            "00000011",
+            "00000010"
+          ],
+          "deleted": true,
+          "updated_at": "2025-10-16T08:26:54.803886Z"
+        },
+        {
+          "id": "2025-10-16T08:25:25.627Z|00000010|fghjk",
+          "from": "00000010",
+          "to": "00000011",
+          "message": "",
+          "timestamp": "2025-10-16T08:25:25.627Z",
+          "quoted_id": "2025-10-16T08:22:00.875Z|00000011|aaaaa",
+          "reactions": {},
+          "read_by": [
+            "00000010",
+            "00000011"
+          ],
+          "deleted": true,
+          "updated_at": "2025-10-16T08:25:56.460301Z"
+        },
+        {
+          "id": "2025-10-16T08:26:18.356Z|00000010|asdfghjk",
+          "from": "00000010",
+          "to": "00000011",
+          "message": "",
+          "timestamp": "2025-10-16T08:26:18.356Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000010",
+            "00000011"
+          ],
+          "deleted": true,
+          "updated_at": "2025-10-16T08:26:23.527902Z"
         }
       ]
     }
