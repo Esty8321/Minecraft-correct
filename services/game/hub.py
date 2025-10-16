@@ -52,7 +52,7 @@ class Hub:
     def __init__(self) -> None:
         self._chunks: Dict[str, torch.Tensor] = {}
         self._chunk_watchers: Dict[str, Set[WebSocket]] = {}
-        self._root_chunk_id = chunk_id_from_coords(0, 0)##??
+        self._root_chunk_id = chunk_id_from_coords(0, 0)
         self._ensure_chunk(self._root_chunk_id)
         self._sockets: Set[WebSocket] = set()
         self._state_by_ws: Dict[WebSocket, PlayerState] = {}

@@ -32,7 +32,7 @@ MoveKey = Literal["arrowup", "up", "arrowdown", "down", "arrowleft", "left", "ar
 @app.on_event("startup")
 async def on_startup() -> None:
     LOGGER.info("Startup: clearing all player bits…")
-    clear_player_bits_all()##??
+    clear_player_bits_all()
     LOGGER.info("Startup complete.")
 
 @app.on_event("shutdown")
@@ -96,7 +96,7 @@ async def _handle_move(ws: WebSocket, key: MoveKey) -> None:
         await hub.move(ws, 0, -1)
     elif key in ("arrowright", "right"):
         await hub.move(ws, 0, +1)
-    # await hub.check_for_message(ws)##??
+    #await hub.check_for_message(ws)##??
 
 async def _handle_message(ws: WebSocket, data: IncomingMsg) -> None:
     content = (data.get("content") or "").strip()
@@ -136,11 +136,11 @@ async def ws_endpoint(ws: WebSocket) -> None:
         await ws.accept()
         LOGGER.info("Client connected: %s", ws.client)
         await hub.connect(ws)
-        try:
-            # await hub.check_for_message(ws)
-            pass
-        except Exception:
-            pass
+        # try:
+        #     # await hub.check_for_message(ws)
+        #     pass
+        # except Exception:
+        #     pass
     except Exception as e:
         LOGGER.exception("Failed to accept/connect client: %s", e)
         await _close_with_reason(ws, 1011, "hub.connect error")
