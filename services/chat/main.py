@@ -254,6 +254,7 @@ def chat_participants_of(m: dict) -> List[str]:
 
 
 async def get_players_from_auth():
+    print("in get players from auth")
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.get(f"{AUTH_SERVICE_URL}/players")
@@ -268,7 +269,7 @@ async def get_players_from_auth():
         return []
     
 # ---------- REST ----------
-@app.get("/active-players")
+@app.get("/players")
 async def get_active_players():
     players = await get_players_from_auth()
     result = []

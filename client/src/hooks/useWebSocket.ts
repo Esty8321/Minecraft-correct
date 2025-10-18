@@ -601,7 +601,7 @@ export function useWebSocket(): UseWS {
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get('token') ?? ''
     if (!token) return
-    fetch(`${apiBase()}/whoami?token=${encodeURIComponent(token)}`)
+    fetch(`${apiBase()}/whoami?token=${encodeURIComponent(token)}`)//??
       .then(r => r.json())
       .then(d => { if (d?.ok) setCurrentPlayerId(d.player_id) })
       .catch(() => {})
@@ -626,7 +626,7 @@ export function useWebSocket(): UseWS {
     let stop = false
     const tick = async () => {
       try {
-        const res = await fetch(`${apiBase()}/active-players`)
+        const res = await fetch(`${apiBase()}/players`)
         const data = await res.json()
         if (!stop) setActivePlayers(data)
       } catch {}

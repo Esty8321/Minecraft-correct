@@ -200,6 +200,8 @@ server.on('upgrade', (req, socket, head) => {
       return;
     }
     if (req.url && req.url.startsWith('/chat')) {
+      console.log("at the chat upgrade");
+      
       req.url = req.url.replace(/^\/chat/, '') || '/'
       try {
         const token = getTokenFromReq(req)

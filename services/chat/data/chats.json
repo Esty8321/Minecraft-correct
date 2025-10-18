@@ -11,7 +11,10 @@
           "timestamp": "2025-10-15T18:40:41.298Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000000", "00000001"],
+          "read_by": [
+            "00000000",
+            "00000001"
+          ],
           "deleted": true,
           "updated_at": "2025-10-15T18:41:58.138010Z"
         },
@@ -23,7 +26,10 @@
           "timestamp": "2025-10-15T18:46:16.585Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000000", "00000010"],
+          "read_by": [
+            "00000000",
+            "00000010"
+          ],
           "deleted": false
         },
         {
@@ -34,7 +40,10 @@
           "timestamp": "2025-10-15T18:46:37.005Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000001", "00000000"],
+          "read_by": [
+            "00000001",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -45,7 +54,10 @@
           "timestamp": "2025-10-15T18:48:18.344Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010", "00000000"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": true,
           "updated_at": "2025-10-16T08:12:25.805456Z"
         },
@@ -57,7 +69,9 @@
           "timestamp": "2025-10-16T06:40:02.670Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010"
+          ],
           "deleted": false
         },
         {
@@ -68,7 +82,9 @@
           "timestamp": "2025-10-16T06:40:07.987Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010"
+          ],
           "deleted": false
         },
         {
@@ -79,7 +95,10 @@
           "timestamp": "2025-10-16T07:04:08.345Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010", "00000000"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -90,7 +109,10 @@
           "timestamp": "2025-10-16T07:04:14.566Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010", "00000000"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -101,7 +123,10 @@
           "timestamp": "2025-10-16T07:54:18.149Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010", "00000000"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -112,7 +137,9 @@
           "timestamp": "2025-10-16T07:54:42.733Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000100"],
+          "read_by": [
+            "00000100"
+          ],
           "deleted": false
         },
         {
@@ -123,7 +150,10 @@
           "timestamp": "2025-10-16T07:55:44.081Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010", "00000000"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -134,7 +164,10 @@
           "timestamp": "2025-10-16T08:03:52.227Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000000", "00000010"],
+          "read_by": [
+            "00000000",
+            "00000010"
+          ],
           "deleted": false
         },
         {
@@ -145,7 +178,9 @@
           "timestamp": "2025-10-16T08:08:16.761Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000000"],
+          "read_by": [
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -156,7 +191,10 @@
           "timestamp": "2025-10-16T08:37:39.491Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010", "00000000"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -167,7 +205,10 @@
           "timestamp": "2025-10-16T09:16:05.018Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010", "00000000"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -178,7 +219,10 @@
           "timestamp": "2025-10-16T09:43:08.532Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -189,7 +233,10 @@
           "timestamp": "2025-10-16T09:49:29.464Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -200,7 +247,10 @@
           "timestamp": "2025-10-16T14:05:20.504Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -211,7 +261,9 @@
           "timestamp": "2025-10-16T14:12:39.662Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010"
+          ],
           "deleted": false
         },
         {
@@ -222,7 +274,10 @@
           "timestamp": "2025-10-16T15:24:09.049Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -233,7 +288,10 @@
           "timestamp": "2025-10-16T15:24:23.054Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -244,7 +302,10 @@
           "timestamp": "2025-10-16T15:27:25.940Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -255,7 +316,10 @@
           "timestamp": "2025-10-16T15:27:50.342Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -266,7 +330,10 @@
           "timestamp": "2025-10-16T15:28:42.624Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -277,7 +344,10 @@
           "timestamp": "2025-10-16T15:42:27.356Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -288,7 +358,10 @@
           "timestamp": "2025-10-16T15:42:38.306Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010",
+            "00000000"
+          ],
           "deleted": false
         },
         {
@@ -299,7 +372,35 @@
           "timestamp": "2025-10-16T16:00:02.602Z",
           "quoted_id": null,
           "reactions": {},
-          "read_by": ["00000010"],
+          "read_by": [
+            "00000010"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-18T20:13:30.639Z|00000000|okey",
+          "from": "00000000",
+          "to": "00000001",
+          "message": "okey",
+          "timestamp": "2025-10-18T20:13:30.639Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000000"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-18T20:13:47.481Z|00000000|let's go",
+          "from": "00000000",
+          "to": "00000001",
+          "message": "let's go",
+          "timestamp": "2025-10-18T20:13:47.481Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000000"
+          ],
           "deleted": false
         }
       ]

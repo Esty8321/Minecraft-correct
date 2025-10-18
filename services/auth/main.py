@@ -6,6 +6,16 @@ from jose import jwt
 import os, json, time, re
 
 app = FastAPI()
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],  # or ["*"]
+    allow_methods=["*"],
+    allow_headers=["*"],
+    allow_credentials=True,
+)
+
 
 DATA = Path(__file__).parent / "users.json"
 DATA.parent.mkdir(parents=True, exist_ok=True)
@@ -150,6 +160,7 @@ async def get_players():
         with open(DATA, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        print("in the get players the data is: ", data)
         return {"players": data.get("users", [])}
     except Exception as e:
         print(f"[AUTH] Error reading players:", e)
