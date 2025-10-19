@@ -26,19 +26,36 @@ def _safe_load_histories() -> dict:
     except (JSONDecodeError, ValueError):
         return {}
 
+# def _atomic_write_histories(payload: dict) -> None:
+#     HISTORIES_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
+#     tmp_path = HISTORIES_JSON_PATH.with_suffix(".tmp")
+#     with open(tmp_path, 'w', encoding='utf-8') as f:
+#         json.dump(payload, f, indent=2, ensure_ascii=False)
+#     os.replace(tmp_path, HISTORIES_JSON_PATH)
 def _atomic_write_histories(payload: dict) -> None:
     HISTORIES_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = HISTORIES_JSON_PATH.with_suffix(".tmp")
     with open(tmp_path, 'w', encoding='utf-8') as f:
         json.dump(payload, f, indent=2, ensure_ascii=False)
-    os.replace(tmp_path, HISTORIES_JSON_PATH)
+
+    # ננסה עד 5 פעמים להחליף את הקובץ, עם המתנה קצרה
+    for attempt in range(5):
+        try:
+            os.replace(tmp_path, HISTORIES_JSON_PATH)
+            return
+        except PermissionError as e:
+            # כנראה שהקובץ נעול – נחכה מעט וננסה שוב
+            time.sleep(0.1)
+    # אם אחרי 5 ניסיונות זה עדיין ננעל – נזרוק חריגה
+    raise
+
 
 def _append_sleep_tokens(actions: list[int], delta_seconds: int) -> None:
     if delta_seconds <= 0:
         return
     hours = delta_seconds // 3600
-    rem   = delta_seconds % 3600
-    minutes = rem // 60
+    rem   = delta_seconds % 3600     
+    minutes = rem // 60  
     seconds = rem % 60
     actions.extend([TOKEN_SLEEP_1H] * hours)
     actions.extend([TOKEN_SLEEP_1M] * minutes)
