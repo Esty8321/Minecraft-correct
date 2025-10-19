@@ -15,7 +15,7 @@ def get_bit(v: torch.Tensor, bit: int) -> torch.Tensor:
 
 def get2(v: torch.Tensor, b0: int, b1: int) -> torch.Tensor:
     return ((v >> b1) & 1) * 2 + ((v >> b0) & 1)
-
+ 
 def set2(v: torch.Tensor, b0: int, b1: int, x: int) -> torch.Tensor:
     x &= 3
     v = v & (~(torch.tensor((1 << b0) | (1 << b1), dtype=DTYPE)) & torch.tensor(0xFF, dtype=DTYPE))

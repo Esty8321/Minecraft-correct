@@ -1,2 +1,66 @@
-__pycache__
-env
+# Ignore local data folder
+data/
+data/**
+
+# Ignore compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# VSCode debug cache
+.vscode/chrome-debug-profile/
+.vscode/chrome-debug-profile/**
+
+# ======================
+# Python
+# ======================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+*.db
+*.log
+*.pid
+
+# ======================
+# Virtual environments
+# ======================
+.venv/
+env/
+venv/
+
+# ======================
+# VS Code settings
+# ======================
+.vscode/
+!.vscode/settings.json   # keep your settings if you want
+!.vscode/launch.json     # keep your launch config if useful
+!.vscode/extensions.json
+
+# ======================
+# Chrome / Debug profiles
+# ======================
+.vscode/chrome-debug-profile/
+.vscode/chrome-debug-profile/**
+
+# ======================
+# Node / JS stuff (if any frontend exists)
+# ======================
+node_modules/
+dist/
+build/
+
+# ======================
+# Local data folder
+# ======================
+data/
+data/**
+
+# ======================
+# OS / temp files
+# ======================
+.DS_Store
+Thumbs.db
+desktop.ini

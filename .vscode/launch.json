@@ -67,6 +67,24 @@
       "console": "integratedTerminal"
     },
     {
+      "name": "Debug Game2 Server (uvicorn)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "services.game2.api.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "7012",
+        "--reload"
+      ],
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false,
+      "subProcess": true,
+      "console": "integratedTerminal"
+    },
+    {
       "name": "Debug Chat Server (uvicorn)",
       "type": "debugpy",
       "request": "launch",
@@ -94,6 +112,16 @@
         "Debug Auth Server (uvicorn)",
         "Debug Game Server (uvicorn)",
         "Debug Chat Server (uvicorn)",
+        "Open Client in Chrome"
+      ]
+    },
+    {
+      "name": "Debug Game2 Stack (client+edge+auth+game2+browser)",
+      "configurations": [
+        "Run Client (npm)",
+        "Run Edge (npm)",
+        "Debug Auth Server (uvicorn)",
+        "Debug Game2 Server (uvicorn)",
         "Open Client in Chrome"
       ]
     }

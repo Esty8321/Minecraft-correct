@@ -1,37 +1,22 @@
-"""
-hub.py
---------
-
-Central manager for the multiplayer game world.
-
-Responsibilities:
-- Manage player connections and positions across chunks.
-- Track, save, and broadcast board (matrix) state.
-- Handle movement, color updates, and hidden messages.
-- Ensure concurrency safety via asyncio locks.
-
-All functions are designed for clarity, maintainability, and production readiness.
-"""
-
 from __future__ import annotations
 import asyncio
 import json
 import logging
 import random
-from dataclasses import dataclass
-from typing import Dict, Optional, Set, Tuple, Literal, TypedDict
+from typing import Dict, Optional, Set, Tuple
 
 import torch
 from fastapi import WebSocket
 
-# --- Core + Data imports ---
+from .helper import  is_empty, neighbor_chunk_id, in_bounds, edge_direction, edge_target_for_direction, random_empty_cell
+from .types import MatrixPayload, Coord, PlayerState, MOVE_TOKENS,Direction
 from ..core.settings import W, H, DTYPE, BIT_HAS_LINK
 from ..core.bits import (
     set_bit, get_bit, make_color,
     with_player, without_player,
     get_player_color_by_user_id,
 )
-from ..core.ids import chunk_id_from_coords, coords_from_chunk_id
+from ..core.ids import chunk_id_from_coords
 from ..data.db_messages import load_message, save_message
 from ..data.db_chunks import save_chunk, load_chunk
 from ..data.db_players import get_player_position, save_player_position
@@ -40,61 +25,7 @@ from ..models.message import Message
 
 logger = logging.getLogger(__name__)
 
-Direction = Literal["up", "down", "left", "right"]
-
-# ------------------------------------------------------------------------
-# Data Models
-# ------------------------------------------------------------------------
-
-@dataclass(frozen=True)
-class Coord:
-    """A coordinate (row, col) on a board."""
-    row: int
-    col: int
-
-
-@dataclass
-class PlayerState:
-    """Holds all runtime state for a connected player."""
-    chunk_id: str
-    pos: Coord
-    visible_cell: torch.Tensor
-    underlying_cell: torch.Tensor
-    color: torch.Tensor
-
-
-class MatrixPayload(TypedDict):
-    """Payload for sending board matrix updates to clients."""
-    type: Literal["matrix"]
-    w: int
-    h: int
-    data: list[int]
-    chunk_id: str
-    total_players: int
-
-
-MOVE_TOKENS: Dict[Tuple[int, int], ActionToken] = {
-    (0, 1): ActionToken.RIGHT,
-    (0, -1): ActionToken.LEFT,
-    (-1, 0): ActionToken.UP,
-    (1, 0): ActionToken.DOWN,
-}
-
-# ------------------------------------------------------------------------
-# Hub Class
-# ------------------------------------------------------------------------
-
 class Hub:
-    """
-    Central controller of the multiplayer world.
-
-    Responsibilities:
-    - Manage connections and disconnections.
-    - Maintain chunk data and broadcast updates.
-    - Track player positions and colors.
-    - Handle inter-chunk transitions and hidden messages.
-    """
-
     def __init__(self) -> None:
         # --- world state ---
         self._chunks: Dict[str, torch.Tensor] = {}
@@ -111,14 +42,10 @@ class Hub:
         # --- thread safety ---
         self._lock: asyncio.Lock = asyncio.Lock()
 
-    # --------------------------------------------------------------------
-    # Chunk management
-    # --------------------------------------------------------------------
-
     def _ensure_chunk(self, chunk_id: str) -> torch.Tensor:
         """Ensure a chunk exists both in memory and storage."""
         if chunk_id in self._chunks:
-            return self._chunks[chunk_id]
+            return self._chunks[chunk_id]  
         board = load_chunk(chunk_id)
         if board is None:
             board = torch.zeros((H, W), dtype=DTYPE)
@@ -126,41 +53,7 @@ class Hub:
         self._chunks[chunk_id] = board
         return board
 
-    @staticmethod
-    def _is_empty(board: torch.Tensor, r: int, c: int) -> bool:
-        """Return True if cell (r,c) is not occupied by a player."""
-        from ..core.settings import BIT_IS_PLAYER
-        return int(get_bit(board[r, c], BIT_IS_PLAYER)) == 0
-
-    def _random_empty_cell(self, board: torch.Tensor) -> Coord:
-        """Pick a random empty cell for spawning a new player."""
-        for _ in range(4096):
-            r, c = random.randrange(H), random.randrange(W)
-            if self._is_empty(board, r, c):
-                return Coord(r, c)
-        return Coord(H // 2, W // 2)
-
-    @staticmethod
-    def _neighbor_chunk_id(chunk_id: str, direction: Direction) -> str:
-        """Return ID of neighbor chunk in the given direction."""
-        cx, cy = coords_from_chunk_id(chunk_id)
-        if direction == "up": cy -= 1
-        elif direction == "down": cy += 1
-        elif direction == "left": cx -= 1
-        elif direction == "right": cx += 1
-        return chunk_id_from_coords(cx, cy)
-
-    # --------------------------------------------------------------------
-    # Connection lifecycle
-    # --------------------------------------------------------------------
-
     async def connect(self, ws: WebSocket, user_id: str) -> None:
-        """
-        Handle a new player connection:
-          - Find spawn position
-          - Create player state
-          - Broadcast updated chunk
-        """
         self._sockets.add(ws)
         chunk_id, spawn = await self._get_spawn_position(user_id)
         color = get_player_color_by_user_id(user_id)
@@ -169,7 +62,6 @@ class Hub:
         logger.info(f"Player {user_id} connected at {chunk_id}:{spawn.row},{spawn.col}")
 
     async def disconnect(self, ws: WebSocket) -> None:
-        """Clean up and persist state on disconnect."""
         async with self._lock:
             state = self._state_by_ws.pop(ws, None)
             user_id = self._user_id_by_ws.pop(ws, None)
@@ -191,10 +83,10 @@ class Hub:
         if pos:
             chunk_id, row, col = pos
             board = self._ensure_chunk(chunk_id)
-            if self._is_empty(board, row, col):
+            if is_empty(board, row, col):
                 return chunk_id, Coord(row, col)
         board = self._ensure_chunk(self._root_chunk_id)
-        return self._root_chunk_id, self._random_empty_cell(board)
+        return self._root_chunk_id, random_empty_cell(board)
 
     async def _spawn_player(self, ws: WebSocket, user_id: str,
                             chunk_id: str, spawn: Coord, color: torch.Tensor) -> PlayerState:
@@ -213,29 +105,7 @@ class Hub:
             self._chunk_watchers.setdefault(chunk_id, set()).add(ws)
         return state
 
-    # --------------------------------------------------------------------
-    # Movement
-    # --------------------------------------------------------------------
-
-    @staticmethod
-    def _in_bounds(r: int, c: int) -> bool:
-        return 0 <= r < H and 0 <= c < W
-
-    @staticmethod
-    def _edge_direction(nr: int, nc: int) -> Direction:
-        """Determine which edge the player is crossing."""
-        if nr < 0: return "up"
-        if nr >= H: return "down"
-        if nc < 0: return "left"
-        return "right"
-
-    @staticmethod
-    def _edge_target_for_direction(state: PlayerState, direction: Direction) -> Coord:
-        """Compute landing coordinate when crossing chunk border."""
-        if direction == "up": return Coord(H - 1, state.pos.col)
-        if direction == "down": return Coord(0, state.pos.col)
-        if direction == "left": return Coord(state.pos.row, W - 1)
-        return Coord(state.pos.row, 0)
+    
 
     def _compose_entry_cells(self, board: torch.Tensor, r: int, c: int,
                              color: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -250,7 +120,7 @@ class Hub:
     def _apply_move_within_chunk(self, state: PlayerState, board: torch.Tensor,
                                  nr: int, nc: int) -> bool:
         """Try to move player inside same chunk."""
-        if not self._is_empty(board, nr, nc):
+        if not is_empty(board, nr, nc):
             return False
         board[state.pos.row, state.pos.col] = state.underlying_cell
         new_under, new_vis = self._compose_entry_cells(board, nr, nc, state.color)
@@ -270,7 +140,6 @@ class Hub:
                 "message": "No state found for this connection."
             }))
             return
-
         board = self._ensure_chunk(state.chunk_id)
         payload: MatrixPayload = {
             "type": "matrix",
@@ -291,11 +160,11 @@ class Hub:
         """Move player across chunks."""
         old_chunk_id = state.chunk_id
         old_board = self._ensure_chunk(old_chunk_id)
-        new_chunk_id = self._neighbor_chunk_id(old_chunk_id, direction)
+        new_chunk_id = neighbor_chunk_id(old_chunk_id, direction)
         new_board = self._ensure_chunk(new_chunk_id)
-        target = self._edge_target_for_direction(state, direction)
+        target = edge_target_for_direction(state, direction)
 
-        if not self._is_empty(new_board, target.row, target.col):
+        if not is_empty(new_board, target.row, target.col):
             return False, old_chunk_id
 
         # leave old chunk
@@ -328,10 +197,10 @@ class Hub:
             nr, nc = state.pos.row + dr, state.pos.col + dc
             moved, old_chunk_id = False, None
 
-            if self._in_bounds(nr, nc):
+            if in_bounds(nr, nc):
                 moved = self._apply_move_within_chunk(state, board, nr, nc)
             else:
-                direction = self._edge_direction(nr, nc)
+                direction = edge_direction(nr, nc)
                 moved, old_chunk_id = self._transfer_between_chunks(ws, state, direction)
 
             if moved and (pid := self._user_id_by_ws.get(ws)):
