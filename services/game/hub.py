@@ -21,11 +21,25 @@ from services.game.db_history import (
 )
 
 
+async def extract_user_id(ws)->str:
+            from jose import jwt
+            from .main import JWT_ALG, JWT_SECRET
+            token = ws.query_params.get("token")
+            user_id = None
+            if token:
+                try:
+                    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+                    user_id = payload.get("sub") or payload.get("id")
+                    ##bring here the color of the player according his id??
+                except Exception:
+                    LOGGER.error("failed to find id by the token")
+            return user_id
+
 LOGGER = logging.getLogger("voxel-hub")
 if not LOGGER.handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
-Direction = Literal["up", "down", "left", "right"]
+Direction = Literal["up", "down", "left", "right"]##use only with this directions??
 
 @dataclass(frozen=True)
 class Coord:
@@ -93,52 +107,61 @@ class Hub:
         else:
             cx += 1
         return chunk_id_from_coords(cx, cy)
+    
+    async def reject_connection(self, ws: WebSocket, reason: str = "Unauthorized")->None:
+        try:
+            await ws.close(code = 4001, reason=reason)
+        except Exception:
+            LOGGER.error(str)
+        self._sockets.discard(ws)
 
     async def connect(self, ws: WebSocket) -> None:
         self._sockets.add(ws)
-        async with self._lock:
+        user_id = await extract_user_id(ws)
+        if user_id is None:
+            await self.reject_connection(ws,"Unauthorized: invalid or missing token")
+            return 
+        chunk_id, spawn = await self._get_spawn_position(user_id)
+        color = self._assign_color(user_id) ##change it to take the color from the function of Adina in the bit file
+        await self._spawn_player(ws, user_id, chunk_id, spawn, color)
+        await self._broadcast_chunk(chunk_id)
+        LOGGER.info(f"Player {user_id} connected at {chunk_id}:{spawn.row},{spawn.col}")
+
+
+    async def _get_spawn_position(self, user_id:str)->tuple[str, Coord]:
+        pos = get_player_position(user_id)
+        if pos:
+            chunk_id, row, col = pos
+            board = self._ensure_chunk(chunk_id)
+            spawn = Coord(row, col) if self._is_empty_cell(board, row, col) else self._random_empty_cell(board)#mabye can I erase the random becuase it can't be that someone will take the place of the user after he connected at his first time to the game
+        else:
             chunk_id = self._root_chunk_id
             board = self._ensure_chunk(chunk_id)
-            # spawn = self._random_empty_cell(board)
-            
-            from jose import jwt
-            from .main import JWT_ALG, JWT_SECRET
-            token = ws.query_params.get("token")
-            user_id = "unknown"
-            if token:
-                try:
-                    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
-                    user_id = payload.get("sub") or payload.get("id") or "unknown"
-                except Exception:
-                    LOGGER.error("failed to find id by the token")
-            pos = get_player_position(user_id)
-            if pos:
-                chunk_id, row, col = pos
-                board = self._ensure_chunk(chunk_id)
-                if self._is_empty_cell(board, row, col):
-                    spawn = Coord(row, col)
-                else:
-                    spawn = self._random_empty_cell(board)
-            else:
-                chunk_id = self._root_chunk_id
-                board = self._ensure_chunk(chunk_id)
-                spawn = self._random_empty_cell(board)
-                
-            pr, pg, pb = (random.randint(0, 3) for _ in range(3))
-            color = make_color(pr, pg, pb)
+            spawn = self._random_empty_cell(board)
+        return chunk_id, spawn
+    
+    async def _spawn_player(self, ws:WebSocket, user_id : str, chunk_id: str, spawn: Coord, color: torch.Tensor)->PlayerState:
+        async with self._lock:
+            board = self._ensure_chunk(chunk_id)
             underlying = without_player(board[spawn.row, spawn.col])
             visible = with_player(color)
             board[spawn.row, spawn.col] = visible
             save_chunk(chunk_id, board)
-            self._state_by_ws[ws] = PlayerState(chunk_id, spawn, visible.clone(), underlying, color)
             
-            if not hasattr(self,"_user_id_by_ws"):
-                self._user_id_by_ws ={}
+            state = PlayerState(chunk_id, spawn, visible.clone(), underlying,color)
+            self._state_by_ws[ws] = state
+            if not hasattr(self, "_user_id_by_ws"):
+                self._user_id_by_ws = {}
             self._user_id_by_ws[ws] = user_id
+            
             save_player_position(user_id, chunk_id, spawn.row, spawn.col)
-           
             self._chunk_watchers.setdefault(chunk_id, set()).add(ws)
-        await self._broadcast_chunk(chunk_id)
+            
+    
+    def _assign_color(self, user_id: str) -> torch.Tensor:##??delete this funcion after and use at the update funcion by the user_id
+        """Assign player color (could later depend on user_id)."""
+        pr, pg, pb = (random.randint(0, 3) for _ in range(3))
+        return make_color(pr, pg, pb) 
 
     async def disconnect(self, ws: WebSocket) -> None:
         prev_chunk_id: Optional[str] = None
@@ -146,8 +169,9 @@ class Hub:
             state = self._state_by_ws.pop(ws, None)
             if state:
                 board = self._ensure_chunk(state.chunk_id)
-                board[state.pos.row, state.pos.col] = state.underlying_cell
-                save_chunk(state.chunk_id, board)
+                board[state.pos.row, state.pos.col] = state.underlying_cell##??becuase the bot continue , need to return at the board and only act the funcion without_player from the board[state.spawn[col, row]]
+
+                save_chunk(state.chunk_id, board)##??
                 watchers = self._chunk_watchers.get(state.chunk_id, set())
                 watchers.discard(ws)
                 prev_chunk_id = state.chunk_id
@@ -162,16 +186,16 @@ class Hub:
             save_player_position(user_id, state.chunk_id, state.pos.row, state.pos.col)
         
         if hasattr(self, "_user_id_by_ws") and ws in self._user_id_by_ws:
-            del self._user_id_by_ws
+            del self._user_id_by_ws[ws]
             
         if prev_chunk_id:
             await self._broadcast_chunk(prev_chunk_id)
 
     async def move(self, ws: WebSocket, dr: int, dc: int) -> None:
         async with self._lock:
+            #do the funcion that now to do the command of the move ??
             state = self._state_by_ws[ws]
             board = self._ensure_chunk(state.chunk_id)
-
             if dr == 0 and dc == 1:
                 tok = TOKEN_RIGHT
             elif dr == 0 and dc == -1:
@@ -208,10 +232,12 @@ class Hub:
                     if user_id:
                         save_player_position(user_id, state.chunk_id, state.pos.row, state.pos.col)
                 return
+                ##until here put inside funcion
             user_id = self._user_id_by_ws.get(ws)
             if user_id:
                 save_player_position(user_id,state.chunk_id, state.pos.row, state.pos.col)
            
+           #do the funcion that take the nr and nc and return corrrect Coord ??
             if nr < 0:
                 direction: Direction = "up"
             elif nr >= H:
@@ -261,6 +287,7 @@ class Hub:
                 await self._broadcast_chunk(new_chunk_id)
                 await self._maybe_send_message_at(ws)
            
+    
     async def color_plus_plus(self, ws: WebSocket) -> None:
         async with self._lock:
             state = self._state_by_ws[ws]
@@ -383,6 +410,7 @@ class Hub:
 
         if hasattr(self, "_user_id_by_ws"):
             user_id = self._user_id_by_ws.get(ws)
-            if user_id and user_id != "unknown":
+            print("user_id", user_id)
+            if user_id is not None:
                 return user_id
         return f"ws-{id(ws)}"

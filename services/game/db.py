@@ -62,20 +62,19 @@ class ChunkDB:
         curr = self.conn.execute("SELECT id FROM chunks")
         return [r[0] for r in curr.fetchall()]
     
-    def clear_player_bits_all(self)-> None:
-        curr = self.conn.execute("SELECT id, data, w, h FROM chunks")
-        rows = curr.fetchall()
-        now = int(time.time())
-        for cid, blob, w, h in rows:
-            arr = np.frombuffer(blob, dtype=np.uint8).copy()
-            arr &= 0xFE
-            new_blob = arr.tobytes(order = 'C')
-            self.conn.execute(
-                "UPDATE chunks SET data=?, last_used=? WHERE id=?",
-                (new_blob, now, cid),
-            )
+    # def clear_player_bits_all(self)-> None:
+    #     curr = self.conn.execute("SELECT id, data, w, h FROM chunks")
+    #     rows = curr.fetchall()
+    #     now = int(time.time())
+    #     for cid, blob, w, h in rows:
+    #         arr = np.frombuffer(blob, dtype=np.uint8).copy()
+    #         arr &= 0xFE
+    #         new_blob = arr.tobytes(order = 'C')
+    #         self.conn.execute(
+    #             "UPDATE chunks SET data=?, last_used=? WHERE id=?",
+    #             (new_blob, now, cid),
+    #         )
             
-#insert_text(board_id, r, c)
 
 _db = ChunkDB()
 def save_chunk(cid: str, data: torch.Tensor)-> None:
@@ -84,8 +83,8 @@ def save_chunk(cid: str, data: torch.Tensor)-> None:
 def load_chunk(cid: str)-> Optional[torch.Tensor]:
     return _db.load_chunk(cid)
 
-def clear_player_bits_all()->None:
-    _db.clear_player_bits_all()
+# def clear_player_bits_all()->None:
+#     _db.clear_player_bits_all()
 
 def _safe_load_messages() -> dict:
     """טוען את קובץ ההודעות בבטחה (גם אם ריק/מקולקל)."""
@@ -106,7 +105,6 @@ def save_message(message: Message) -> None:
         location_key = f"{message.chunk_id}_{message.position[0]}_{message.position[1]}"
         messages[location_key] = message.to_dict()
 
-        # כתיבה אטומית
         tmp_path = MESSAGES_JSON_PATH.with_suffix(".tmp")
         with open(tmp_path, 'w', encoding='utf-8') as f:
             json.dump(messages, f, indent=2, ensure_ascii=False)
