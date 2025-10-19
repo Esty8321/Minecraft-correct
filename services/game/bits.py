@@ -1,4 +1,5 @@
 import torch
+import hashlib
 from .settings import DTYPE, COLOR_BITS, BIT_IS_PLAYER, BIT_R0, BIT_R1, BIT_G0, BIT_G1, BIT_B0, BIT_B1
 
 def set_bit(v: torch.Tensor, bit: int, one: bool) -> torch.Tensor:
@@ -37,3 +38,10 @@ def with_player(v: torch.Tensor) -> torch.Tensor:
 def without_player(v: torch.Tensor) -> torch.Tensor:
     return set_bit(v, BIT_IS_PLAYER, False)
 
+def get_player_color_by_user_id(id) -> torch.Tensor:
+    id_str = str(id).encode('utf-8')
+    digest = hashlib.sha256(id_str).digest()
+    r2 = digest[0] & 3
+    g2 = digest[1] & 3
+    b2 = digest[2] & 3
+    return make_color(r2, g2, b2)
