@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Ignore local data folder
 data/
 data/**
@@ -65,7 +64,3 @@ data/**
 .DS_Store
 Thumbs.db
 desktop.ini
-=======
-__pycache__
-env
->>>>>>> 089e79f (adding the game2 folder to try tidy the code)
