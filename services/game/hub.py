@@ -317,7 +317,6 @@ class Hub:
             save_player_position(user_id, state.chunk_id, state.pos.row, state.pos.col)
 
     async def _post_move_housekeeping(self, ws: WebSocket, state: PlayerState, old_chunk_id: Optional[str] = None) -> None:
-        """שידור/הודעות אחרי תנועה."""
         if old_chunk_id and old_chunk_id != state.chunk_id:
             await self._broadcast_chunk(old_chunk_id)
             await self._broadcast_chunk(state.chunk_id)
@@ -330,7 +329,6 @@ class Hub:
         tok = self._direction_token(dr, dc)
 
         async with self._lock:
-            #do the funcion that now to do the command of the move ??
             state = self._state_by_ws[ws]
             board = self._ensure_chunk(state.chunk_id)
 
