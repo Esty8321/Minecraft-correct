@@ -104,7 +104,7 @@ class Hub:
             save_player_position(user_id, chunk_id, spawn.row, spawn.col)
             self._chunk_watchers.setdefault(chunk_id, set()).add(ws)
         return state
-
+  
     
 
     def _compose_entry_cells(self, board: torch.Tensor, r: int, c: int,
