@@ -6,7 +6,6 @@ from pathlib import Path
 BASE_ROOT_DIR = Path(os.path.dirname(os.path.abspath(__file__))).parents[1]  # תקני בהתאם למבנה שלך
 HISTORIES_JSON_PATH = BASE_ROOT_DIR / "data" / "history.json"
 
-# === מיפוי טוקנים ===
 TOKEN_RIGHT = 1
 TOKEN_LEFT  = 2
 TOKEN_UP    = 3
@@ -26,12 +25,6 @@ def _safe_load_histories() -> dict:
     except (JSONDecodeError, ValueError):
         return {}
 
-# def _atomic_write_histories(payload: dict) -> None:
-#     HISTORIES_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
-#     tmp_path = HISTORIES_JSON_PATH.with_suffix(".tmp")
-#     with open(tmp_path, 'w', encoding='utf-8') as f:
-#         json.dump(payload, f, indent=2, ensure_ascii=False)
-#     os.replace(tmp_path, HISTORIES_JSON_PATH)
 def _atomic_write_histories(payload: dict) -> None:
     HISTORIES_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = HISTORIES_JSON_PATH.with_suffix(".tmp")

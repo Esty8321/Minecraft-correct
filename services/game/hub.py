@@ -128,7 +128,7 @@ class Hub:
             await self.reject_connection(ws,"Unauthorized: invalid or missing token")
             return 
         chunk_id, spawn = await self._get_spawn_position(user_id)
-        color = get_player_color_by_user_id(user_id) ##change it to take the color from the function of Adina in the bit file
+        color = get_player_color_by_user_id(user_id)
         await self._spawn_player(ws, user_id, chunk_id, spawn, color)
         await self._broadcast_chunk(chunk_id)
         LOGGER.info(f"Player {user_id} connected at {chunk_id}:{spawn.row},{spawn.col}")
@@ -139,8 +139,7 @@ class Hub:
         if pos:
             chunk_id, row, col = pos
             board = self._ensure_chunk(chunk_id)
-            spawn = Coord(row, col) if self._is_empty_cell(board, row, col) else self._random_empty_cell(board)#mabye can I erase the random becuase it can't be that someone will take the place of the user after he connected at his first time to the game
-        else:
+            spawn = Coord(row, col) if self._is_empty_cell(board, row, col) else self._random_empty_cell(board)
             chunk_id = self._root_chunk_id
             board = self._ensure_chunk(chunk_id)
             spawn = self._random_empty_cell(board)
@@ -165,12 +164,7 @@ class Hub:
             self._chunk_watchers.setdefault(chunk_id, set()).add(ws)
 
         return state
-            
-    
-    def _assign_color(self, user_id: str) -> torch.Tensor:##??delete this funcion after and use at the update funcion by the user_id
-        """Assign player color (could later depend on user_id)."""
-        pr, pg, pb = (random.randint(0, 3) for _ in range(3))
-        return make_color(pr, pg, pb) 
+
 
 
     async def disconnect(self, ws: WebSocket) -> None:
@@ -236,17 +230,13 @@ class Hub:
     def _apply_move_within_chunk(
         self, state: PlayerState, board: torch.Tensor, nr: int, nc: int
     ) -> bool:
-        """מזיז שחקן בתוך צ'אנק אם היעד פנוי. מחזיר True אם זז בפועל."""
         if not self._is_empty_cell(board, nr, nc):
             return False
 
-        # שחרור התא הנוכחי
         board[state.pos.row, state.pos.col] = state.underlying_cell
 
-        # הכנת תאי יעד
         new_underlying, new_visible = self._compose_entry_cells(board, nr, nc, state.color)
 
-        # כתיבה ליעד ועדכון סטייט
         board[nr, nc] = new_visible
         save_chunk(state.chunk_id, board)
 
@@ -276,10 +266,6 @@ class Hub:
         return Coord(state.pos.row, 0)
 
     def _transfer_between_chunks(self, ws: WebSocket, state: PlayerState, direction: Direction) -> tuple[bool, str]:
-        """
-        מעביר שחקן לצ'אנק שכן בהתאם לכיוון. מחזיר (moved, old_chunk_id).
-        מטפל בעדכון לוחות, צופים ושמירה לדיסק.
-        """
         old_chunk_id = state.chunk_id
         old_board = self._ensure_chunk(old_chunk_id)
 
@@ -290,20 +276,16 @@ class Hub:
         if not self._is_empty_cell(new_board, target.row, target.col):
             return False, old_chunk_id
 
-        # שחרור מהתא הישן ושמירה
         old_board[state.pos.row, state.pos.col] = state.underlying_cell
         save_chunk(old_chunk_id, old_board)
 
-        # כניסה לתא חדש
         new_underlying, new_visible = self._compose_entry_cells(new_board, target.row, target.col, state.color)
         new_board[target.row, target.col] = new_visible
         save_chunk(new_chunk_id, new_board)
 
-        # עדכון קבוצות צופים
         self._chunk_watchers.setdefault(new_chunk_id, set()).add(ws)
         self._chunk_watchers.get(old_chunk_id, set()).discard(ws)
 
-        # עדכון סטייט
         state.chunk_id = new_chunk_id
         state.pos = target
         state.underlying_cell = new_underlying
@@ -317,7 +299,6 @@ class Hub:
             save_player_position(user_id, state.chunk_id, state.pos.row, state.pos.col)
 
     async def _post_move_housekeeping(self, ws: WebSocket, state: PlayerState, old_chunk_id: Optional[str] = None) -> None:
-        """שידור/הודעות אחרי תנועה."""
         if old_chunk_id and old_chunk_id != state.chunk_id:
             await self._broadcast_chunk(old_chunk_id)
             await self._broadcast_chunk(state.chunk_id)
@@ -468,7 +449,6 @@ class Hub:
                     pass
                 return
 
-        # שידור והכרזה אחרי שחרור הנעילה
         await self._broadcast_chunk(state.chunk_id)
         notice = json.dumps({"type": "announcement", "data": {"text": "A player hid a treasure"}})
         for target_ws in list(self._chunk_watchers.get(state.chunk_id, set())):
