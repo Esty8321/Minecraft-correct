@@ -2,13 +2,10 @@ import os
 import json
 import logging
 from typing import Any, Optional, Tuple, TypedDict, Literal
-
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from jose import jwt, JWTError
-
 from .settings import W, H
 from .hub import Hub
-from .db import clear_player_bits_all
 
 JWT_SECRET = os.getenv("AUTH_JWT_SECRET", "CHANGE_ME_123456789")
 JWT_ALG = os.getenv("JWT_ALG", "HS256")
@@ -19,36 +16,15 @@ if not LOGGER.handlers:
         level=os.getenv("LOG_LEVEL", "INFO"),
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
-
 app = FastAPI(title="-Voxel Server-")
 hub = Hub()
 
 class IncomingMsg(TypedDict, total=False):
     k: str
     content: str
-
-MoveKey = Literal["arrowup", "up", "arrowdown", "down", "arrowleft", "left", "arrowright", "right"]
-
-@app.on_event("startup")
-async def on_startup() -> None:
-    LOGGER.info("Startup: clearing all player bits…")
-    clear_player_bits_all()
-    LOGGER.info("Startup complete.")
-
-@app.on_event("shutdown")
-async def on_shutdown() -> None:
-    LOGGER.info("Shutdown: disconnecting all websockets…")
-    for ws in list(hub.pos_by_ws.keys()):
-        try:
-            await hub.disconnect(ws)
-        except Exception as e:
-            LOGGER.warning("Failed to disconnect ws during shutdown: %r", e)
-    LOGGER.info("Shutdown complete.")
-
-@app.get("/")
-def root() -> dict[str, Any]:
-    return {"ok": True, "w": W, "h": H}
-
+     
+MoveKey = Literal[ "up", "down", "left", "right"]
+   
 def _extract_token(ws: WebSocket) -> Optional[str]:
     try:
         token = ws.query_params.get("token")
@@ -75,7 +51,7 @@ def _verify_token_or_reason(token: Optional[str]) -> Tuple[bool, str]:
     except Exception as e:
         return False, f"token error: {e}"
 
-async def _safe_send_json(ws: WebSocket, obj: Any) -> None:
+async def _safe_send_json(ws: WebSocket, obj: Any) -> None:##??mabye can erase this function
     try:
         await ws.send_text(json.dumps(obj))
     except Exception as e:
@@ -88,15 +64,14 @@ async def _close_with_reason(ws: WebSocket, code: int, reason: str) -> None:
         pass
 
 async def _handle_move(ws: WebSocket, key: MoveKey) -> None:
-    if key in ("arrowup", "up"):
+    if key in ( "up"):
         await hub.move(ws, -1, 0)
-    elif key in ("arrowdown", "down"):
+    elif key in ("down"):
         await hub.move(ws, +1, 0)
-    elif key in ("arrowleft", "left"):
+    elif key in ("left"):
         await hub.move(ws, 0, -1)
-    elif key in ("arrowright", "right"):
+    elif key in ("right"):
         await hub.move(ws, 0, +1)
-    #await hub.check_for_message(ws)##??
 
 async def _handle_message(ws: WebSocket, data: IncomingMsg) -> None:
     content = (data.get("content") or "").strip()
@@ -111,7 +86,7 @@ async def _handle_message(ws: WebSocket, data: IncomingMsg) -> None:
 async def _handle_command(ws: WebSocket, data: IncomingMsg) -> None:
     k = (data.get("k") or "").lower()
     try:
-        if k in ("arrowup", "up", "arrowdown", "down", "arrowleft", "left", "arrowright", "right"):
+        if k in ( "up", "down", "left","right"):
             await _handle_move(ws, k)  # type: ignore[arg-type]
         elif k in ("c", "color", "color++"):
             await hub.color_plus_plus(ws)
@@ -136,11 +111,6 @@ async def ws_endpoint(ws: WebSocket) -> None:
         await ws.accept()
         LOGGER.info("Client connected: %s", ws.client)
         await hub.connect(ws)
-        # try:
-        #     # await hub.check_for_message(ws)
-        #     pass
-        # except Exception:
-        #     pass
     except Exception as e:
         LOGGER.exception("Failed to accept/connect client: %s", e)
         await _close_with_reason(ws, 1011, "hub.connect error")

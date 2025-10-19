@@ -8,8 +8,9 @@ from typing import Dict, Optional, Set, Tuple, Literal, TypedDict
 import torch
 from fastapi import WebSocket
 
+
 from .settings import BIT_HAS_LINK, W, H, DTYPE, BIT_IS_PLAYER
-from .bits import set_bit, get_bit, make_color, with_player, without_player
+from .bits import set_bit, get_bit, make_color, with_player, without_player, get_player_color_by_user_id
 from .ids import chunk_id_from_coords, coords_from_chunk_id
 from .db import load_message, save_chunk, load_chunk, save_message
 from .models import Message
@@ -20,11 +21,26 @@ from services.game.db_history import (
     TOKEN_RIGHT, TOKEN_LEFT, TOKEN_UP, TOKEN_DOWN, TOKEN_COLOR,
 )
 
+
+async def extract_user_id(ws :WebSocket)->str:
+            from jose import jwt
+            from .main import JWT_ALG, JWT_SECRET
+            token = ws.query_params.get("token")
+            user_id = None
+            if token:
+                try:
+                    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+                    user_id = payload.get("sub") or payload.get("id")
+                    ##bring here the color of the player according his id??
+                except Exception:
+                    LOGGER.error("failed to find id by the token")
+            return user_id
+
 LOGGER = logging.getLogger("voxel-hub")
 if not LOGGER.handlers:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
-Direction = Literal["up", "down", "left", "right"]
+Direction = Literal["up", "down", "left", "right"]##use only with this directions??
 
 @dataclass(frozen=True)
 class Coord:
@@ -95,56 +111,67 @@ class Hub:
         else:
             cx += 1
         return chunk_id_from_coords(cx, cy)
+    
+    async def reject_connection(self, ws: WebSocket, reason: str = "Unauthorized")->None:
+        try:
+            await ws.close(code = 4001, reason=reason)
+        except Exception:
+            LOGGER.error(str)
+        self._sockets.discard(ws)
 
     # ---------- חיבור/ניתוק ----------
 
     async def connect(self, ws: WebSocket) -> None:
         self._sockets.add(ws)
-        async with self._lock:
+        user_id = await extract_user_id(ws)
+        if user_id is None:
+            await self.reject_connection(ws,"Unauthorized: invalid or missing token")
+            return 
+        chunk_id, spawn = await self._get_spawn_position(user_id)
+        color = get_player_color_by_user_id(user_id) ##change it to take the color from the function of Adina in the bit file
+        await self._spawn_player(ws, user_id, chunk_id, spawn, color)
+        await self._broadcast_chunk(chunk_id)
+        LOGGER.info(f"Player {user_id} connected at {chunk_id}:{spawn.row},{spawn.col}")
+
+
+    async def _get_spawn_position(self, user_id:str)->tuple[str, Coord]:
+        pos = get_player_position(user_id)
+        if pos:
+            chunk_id, row, col = pos
+            board = self._ensure_chunk(chunk_id)
+            spawn = Coord(row, col) if self._is_empty_cell(board, row, col) else self._random_empty_cell(board)#mabye can I erase the random becuase it can't be that someone will take the place of the user after he connected at his first time to the game
+        else:
             chunk_id = self._root_chunk_id
             board = self._ensure_chunk(chunk_id)
-
-            # זהות משתמש מה־JWT (אם קיים)
-            from jose import jwt
-            from .main import JWT_ALG, JWT_SECRET
-            token = ws.query_params.get("token")
-            user_id = "unknown"
-            if token:
-                try:
-                    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
-                    user_id = payload.get("sub") or payload.get("id") or "unknown"
-                except Exception:
-                    LOGGER.error("failed to find id by the token")
-
-            # נסיון שחזור מיקום אחרון, אחרת ספאון רנדומלי
-            pos = get_player_position(user_id)
-            if pos:
-                chunk_id, row, col = pos
-                board = self._ensure_chunk(chunk_id)
-                if self._is_empty_cell(board, row, col):
-                    spawn = Coord(row, col)
-                else:
-                    spawn = self._random_empty_cell(board)
-            else:
-                chunk_id = self._root_chunk_id
-                board = self._ensure_chunk(chunk_id)
-                spawn = self._random_empty_cell(board)
-
-            pr, pg, pb = (random.randint(0, 3) for _ in range(3))
-            color = make_color(pr, pg, pb)
+            spawn = self._random_empty_cell(board)
+        return chunk_id, spawn
+    
+    async def _spawn_player(self, ws: WebSocket, user_id: str, chunk_id: str, spawn: Coord, color: torch.Tensor) -> PlayerState:
+        """Create and register the player on the board and in memory."""
+        async with self._lock:
+            board = self._ensure_chunk(chunk_id)
             underlying = without_player(board[spawn.row, spawn.col])
             visible = with_player(color)
             board[spawn.row, spawn.col] = visible
             save_chunk(chunk_id, board)
 
-            self._state_by_ws[ws] = PlayerState(chunk_id, spawn, visible.clone(), underlying, color)
-            self._user_id_by_ws[ws] = user_id
-            if user_id:
-                save_player_position(user_id, chunk_id, spawn.row, spawn.col)
+            state = PlayerState(chunk_id, spawn, visible.clone(), underlying, color)
+            self._state_by_ws[ws] = state
+            if not hasattr(self, "_user_id_by_ws"):
+                self._user_id_by_ws = {}
+            self._user_id_by_ws[ws] = user_id  
 
+            save_player_position(user_id, chunk_id, spawn.row, spawn.col)
             self._chunk_watchers.setdefault(chunk_id, set()).add(ws)
 
-        await self._broadcast_chunk(chunk_id)
+        return state
+            
+    
+    def _assign_color(self, user_id: str) -> torch.Tensor:##??delete this funcion after and use at the update funcion by the user_id
+        """Assign player color (could later depend on user_id)."""
+        pr, pg, pb = (random.randint(0, 3) for _ in range(3))
+        return make_color(pr, pg, pb) 
+
 
     async def disconnect(self, ws: WebSocket) -> None:
         prev_chunk_id: Optional[str] = None
@@ -160,28 +187,25 @@ class Hub:
                     color=state.color.clone(),
                 )
                 board = self._ensure_chunk(state.chunk_id)
-                board[state.pos.row, state.pos.col] = state.underlying_cell
-                save_chunk(state.chunk_id, board)
+                board[state.pos.row, state.pos.col] = state.underlying_cell##??becuase the bot continue , need to return at the board and only act the funcion without_player from the board[state.spawn[col, row]]
+
+                save_chunk(state.chunk_id, board)##??
                 watchers = self._chunk_watchers.get(state.chunk_id, set())
                 watchers.discard(ws)
                 prev_chunk_id = state.chunk_id
 
             self._last_msg_pos_by_ws.pop(ws, None)
             self._sockets.discard(ws)
-
-            # מחיקת מיפוי משתמש־שקע בצורה נקודתית בלבד
-            if ws in self._user_id_by_ws:
-                del self._user_id_by_ws[ws]
-
-        # שומר מיקום אחרון אם ניתן
-        if state_snapshot:
-            user_id = self._user_id_by_ws.get(ws, None)  # יהיה None אחרי מחיקה, אז לא ישמר — זה מכוון.
-            # נשמר לפני המחיקה למעלה; כאן אין מה לעדכן.
-
-        if prev_chunk_id:
-            await self._broadcast_chunk(prev_chunk_id)
-
-    # ---------- ריפקטור תנועה: תתי-פונקציות עוזרות ----------
+       
+        if hasattr(self, "_user_id_by_ws"):
+            user_id = self._user_id_by_ws.get(ws)
+            state = self._state_by_ws.get(ws)
+        if user_id and state:
+            save_player_position(user_id, state.chunk_id, state.pos.row, state.pos.col)
+        
+        if hasattr(self, "_user_id_by_ws") and ws in self._user_id_by_ws:
+            del self._user_id_by_ws[ws]
+            
 
     def _direction_token(self, dr: int, dc: int) -> int:
         if dr == 0 and dc == 1:
@@ -306,8 +330,10 @@ class Hub:
         tok = self._direction_token(dr, dc)
 
         async with self._lock:
+            #do the funcion that now to do the command of the move ??
             state = self._state_by_ws[ws]
             board = self._ensure_chunk(state.chunk_id)
+
 
             nr, nc = state.pos.row + dr, state.pos.col + dc
             moved = False
@@ -317,6 +343,7 @@ class Hub:
                 moved = self._apply_move_within_chunk(state, board, nr, nc)
                 if moved:
                     append_player_action(self._player_id(ws), state.chunk_id, tok)
+
                     self._save_player_pos_if_known(ws, state)
             else:
                 direction = self._edge_direction(nr, nc)
@@ -327,6 +354,7 @@ class Hub:
 
         if moved:
             await self._post_move_housekeeping(ws, state, old_chunk_id=old_chunk_id)
+
 
 
     async def color_plus_plus(self, ws: WebSocket) -> None:
@@ -347,7 +375,7 @@ class Hub:
     async def _send_chunk(self, ws: WebSocket) -> None:
         state = self._state_by_ws.get(ws)
         if not state:
-            return
+            return    
         board = self._ensure_chunk(state.chunk_id)
         payload: MatrixPayload = {
             "type": "matrix",
@@ -450,9 +478,9 @@ class Hub:
                 LOGGER.debug("send announcement failed: %r", e)
 
     def _player_id(self, ws: WebSocket) -> str:
-        user_id = self._user_id_by_ws.get(ws)
-        if user_id and user_id != "unknown":
-            return user_id
-        else:
-            print("unknown user id, using ws id instead")
-        return f"ws-{id(ws)}"
+        if hasattr(self, "_user_id_by_ws"):
+            user_id = self._user_id_by_ws.get(ws)
+            print("user_id", user_id)
+            if user_id is not None:
+                return user_id
+
