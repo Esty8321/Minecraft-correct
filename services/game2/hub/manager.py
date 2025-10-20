@@ -128,7 +128,7 @@ class Hub:
         
         await self.messaging.broadcast_chunk(state.chunk_id)
         await self.messaging.maybe_send_message_at(ws)
-
+  
     async def write_message(self, ws: WebSocket, content: str) -> None:
       await self.messaging.write_message(ws, content)
 

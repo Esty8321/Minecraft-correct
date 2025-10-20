@@ -247,12 +247,16 @@ export function useWebSocket(): UseWS {
     let stop = false
     const tick = async () => {
       try {
-        const res = await fetch(`${apiBase()}ws/players`)
+        const token = localStorage.getItem("token") || authStorage.getToken()
+        if(!token) return
+
+
+        const res = await fetch(`${apiBase()}/players?token=${encodeURIComponent(token)}`)
         const data = await res.json()
         if (!stop) setActivePlayers(data)
       } catch {}
     }
-    tick()
+    tick()  
     const id = setInterval(tick, 3000)
     return () => { stop = true; clearInterval(id) }
   }, [])

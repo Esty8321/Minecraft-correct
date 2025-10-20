@@ -1,6 +1,10 @@
+import math
 import sqlite3, time
 from typing import Optional, Tuple
 from ..core.settings import PLAYERS_DB_PATH
+from ..data import db_chunks
+
+
 
 class PlayerDB:
     """Track per-player last known chunk + position in players.db."""
@@ -37,3 +41,33 @@ class PlayerDB:
 _db = PlayerDB()
 def get_player_position(pid: str) -> Optional[Tuple[str, int, int]]: return _db.get_position(pid)
 def save_player_position(pid: str, cid: str, row: int, col: int) -> None: _db.upsert_position(pid, cid, row, col)
+
+
+
+def find_nearest_player_in_chunk(current_id: str)->Optional[str]:
+    me = _db.get_position(current_id)
+    if not me:
+        return None
+    chunk_id, my_row, my_col = me
+    cur = _db.conn.cursor()
+    cur.execute(
+        "SELECT id, row, col FROM players WHERE chunk_id=? AND id!=?",
+        (chunk_id, current_id)
+    )
+    others = cur.fetchall()
+    if not others:
+        return None
+    board = db_chunks.load_chunk(chunk_id)
+    nearest = None
+    for pid, r, c in others:
+        dist = math.hypot(r - my_row, c - my_col)
+        if dist < nearest_dist:
+            nearest = pid
+            nearest_dist = dist
+    return nearest
+    
+
+    
+    
+        
+

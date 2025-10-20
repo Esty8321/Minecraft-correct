@@ -3,7 +3,7 @@ import torch
 from .settings import (
     DTYPE, COLOR_BITS,
     BIT_IS_PLAYER, BIT_R0, BIT_R1, BIT_G0, BIT_G1, BIT_B0, BIT_B1
-)
+)  
 
 def set_bit(v: torch.Tensor, bit: int, one: bool) -> torch.Tensor:
     """Set/Clear single bit on an 8-bit tensor value."""

@@ -5,6 +5,7 @@ from typing import Any, get_args
 from fastapi import FastAPI, WebSocket
 from services.game2.hub.manager import Hub
 from services.game2.hub.types import Direction, IncomingMsg
+from services.game2.data.db_players import find_nearest_player_in_chunk
 
 logger = logging.getLogger(__name__)
 app = FastAPI(title="Voxel Server")
@@ -63,3 +64,11 @@ async def ws_endpoint(ws: WebSocket) -> None:
             await hub.disconnect(ws)
         except Exception:
             pass
+        
+        
+@app.get("/nearest-player/{player_id}")
+async def nearest_player(player_id: str):
+    pid = find_nearest_player_in_chunk(player_id)
+    if not pid:
+        return {"ok": False, "nearest" : None}
+    return {"ok":True, "nearest": pid}

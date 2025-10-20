@@ -165,3 +165,20 @@ async def get_players():
     except Exception as e:
         print(f"[AUTH] Error reading players:", e)
         return {"players": []}
+
+from fastapi import FastAPI, Query
+from fastapi.responses import JSONResponse
+import jwt, os
+
+JWT_SECRET = os.getenv("AUTH_JWT_SECRET", "CHANGE_ME_123456789")
+
+@app.get("/whoami")
+async def whoami(token: str = Query(...)):
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        return {"ok": True, "player": {
+            "id": payload.get("sub"),
+            "username": payload.get("username"),
+        }}
+    except Exception as e:
+        return JSONResponse({"ok": False, "reason": str(e)}, status_code=401)

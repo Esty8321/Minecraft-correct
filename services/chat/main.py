@@ -11,6 +11,7 @@ import httpx
 from services.game.db_history import append_player_action, TOKEN_DM
 
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://127.0.0.1:7001")
+GAME_SERVICE_URL = "http://127.0.0.1:7002"
 
 # ---------- נתיבי קבצים (מוחלטים) ----------
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
@@ -267,17 +268,57 @@ async def get_players_from_auth():
     except Exception as e:
         print(f"[CHAT] Error fetching players:", e)
         return []
-    
+async def get_active_player(user_token:str) ->List[Dict]:
+    try: 
+        if not user_token:
+            return []
+        async with httpx.AsyncClient() as client:
+            whoami_resp = await client.get(f"{AUTH_SERVICE_URL}/whoami?token={user_token}")
+            if whoami_resp.status_code != 200:
+                print("[CHAT] Failed whoami:", whoami_resp.status_code)
+                return []
+            me = whoami_resp.json().get("player")
+            if not me:
+                return []
+            
+        async with httpx.AsyncClient() as client:
+            near_resp = await client.get(f"{GAME_SERVICE_URL}/nearest-player/{me['id']}")
+            if near_resp.status_code == 200:
+                data = near_resp.json()
+                nearest_id = data.get("nearest")
+            else:
+                print(f"[CHAT] nearest-player failed {near_resp.status_code}")
+                nearest_id = None
+        players = [me]
+        if nearest_id:
+            players.append({
+                "id": nearest_id,
+                "username": f"Player {nearest_id}",
+                "status": "online"
+            })
+            
+        return players
+    except Exception as e:
+        print("[CHAT] Error fetching players:", e)
+        return []
+        
+        
+from fastapi import Query
+           
 # ---------- REST ----------
 @app.get("/players")
-async def get_active_players():
+async def get_active_players(token: str = Query(None)):
     print("I am at the route of the chat")
-    players = await get_players_from_auth()
+    if not token:
+        return {"error": "missing token"}
+    players = await get_active_player(token)
     result = []
     for p in players:
         pid = p.get("id") or p.get("player_id") or p.get("name")
         result.append({**p, "is_connected": bool(active_players.get(pid))})
     return result
+    
+    
 
 # @app.get("/whoami")
 # async def whoami(token: str):
