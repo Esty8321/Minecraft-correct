@@ -30,6 +30,18 @@ class MatrixPayload(TypedDict):
     chunk_id: str
     total_players: int
 
+class AnnouncementPayload(TypedDict):
+    type: Literal["announcement"]
+    data: dict
+
+class ErrorPayload(TypedDict):
+    type: Literal["error"]
+    code: str
+    message: str
+
+class IncomingMsg(TypedDict, total=False):
+    k: str
+    content: str
 
 MOVE_TOKENS: Dict[Tuple[int, int], ActionToken] = {
     (0, 1): ActionToken.RIGHT,
@@ -41,6 +53,3 @@ MOVE_TOKENS: Dict[Tuple[int, int], ActionToken] = {
 Direction = Literal["up", "down", "left", "right"]
 
 
-class IncomingMsg(TypedDict, total=False):
-    k: str
-    content: str
