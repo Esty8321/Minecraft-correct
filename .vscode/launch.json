@@ -1,6 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
+
     {
       "name": "Run Client (npm)",
       "type": "pwa-node",
@@ -76,7 +77,7 @@
         "--host",
         "127.0.0.1",
         "--port",
-        "7012",
+        "7002",
         "--reload"
       ],
       "cwd": "${workspaceFolder}",

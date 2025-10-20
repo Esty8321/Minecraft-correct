@@ -49,7 +49,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
         await ws.close(code=1011, reason="hub.connect error")
         return
 
-    try:
+    try:  
         async for raw in ws.iter_text():
             try:
                 data = json.loads(raw)

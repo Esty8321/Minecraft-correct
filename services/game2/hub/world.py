@@ -63,8 +63,8 @@ class WorldService:
         if pos:
             chunk_id, row, col = pos
             board = self.ensure_chunk(chunk_id)
-        if is_empty(board, row, col):
-            return chunk_id, Coord(row, col)
+            if is_empty(board, row, col):
+                return chunk_id, Coord(row, col)
         board = self.ensure_chunk(self.root_chunk_id)
         return self.root_chunk_id, random_empty_cell(board)
 

@@ -103,6 +103,15 @@ class Hub:
         token = MOVE_TOKENS.get((dr, dc))
         if token is not None:
             append_player_action(sess.user_id, state.chunk_id, int(token))
+        
+        if moved.old_chunk_id and moved.old_chunk_id != state.chunk_id:
+            # remove from old watchers
+            self.sessions.detach_watcher(moved.old_chunk_id, ws)
+            # attach to new watchers
+            self.sessions.attach_watcher(state.chunk_id, ws)
+            # send the new chunk’s matrix to this player
+            await self.messaging.broadcast_chunk(state.chunk_id)
+            return
         # fanout updates
         await self.messaging.broadcast_chunk(state.chunk_id)
         await self.messaging.maybe_send_message_at(ws)

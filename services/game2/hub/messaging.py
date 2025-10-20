@@ -52,8 +52,9 @@ class MessagingService:
         state = sess.state
         board = self.world.ensure_chunk(state.chunk_id)
         cell_under = state.underlying_cell or board[state.pos.row, state.pos.col]
+        current_pos = (state.chunk_id, state.pos.row, state.pos.col)
+
         if get_bit(cell_under, BIT_HAS_LINK):
-            current_pos = (state.chunk_id, state.pos.row, state.pos.col)
             if sess.last_msg_pos == current_pos:
                 return
         msg = load_message(state.chunk_id, state.pos.row, state.pos.col)

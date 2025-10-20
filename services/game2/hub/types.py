@@ -20,7 +20,6 @@ class PlayerState:
     underlying_cell: torch.Tensor
     color: torch.Tensor
 
-
 class MatrixPayload(TypedDict):
     """Payload for sending board matrix updates to clients."""
     type: Literal["matrix"]
@@ -42,7 +41,7 @@ class ErrorPayload(TypedDict):
 class IncomingMsg(TypedDict, total=False):
     k: str
     content: str
-
+   
 MOVE_TOKENS: Dict[Tuple[int, int], ActionToken] = {
     (0, 1): ActionToken.RIGHT,
     (0, -1): ActionToken.LEFT,

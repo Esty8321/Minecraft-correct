@@ -271,6 +271,7 @@ async def get_players_from_auth():
 # ---------- REST ----------
 @app.get("/players")
 async def get_active_players():
+    print("I am at the route of the chat")
     players = await get_players_from_auth()
     result = []
     for p in players:
