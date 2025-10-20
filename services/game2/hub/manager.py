@@ -37,8 +37,7 @@ class Hub:
         # global lock only for rare cross-service critical sections
         self._global_lock = asyncio.Lock()
     
-   # בתוך class Hub ב-manager.py
-   # בתוך class Hub:
+   
     async def color_plus_plus(self, ws: WebSocket) -> None:
 
         sess = self.sessions.get(ws)
@@ -62,11 +61,17 @@ class Hub:
         save_chunk(state.chunk_id, board)
 
         try:
-            append_player_action(sess.user_id, state.chunk_id, ActionToken.COLOR)
+                append_player_action(
+                    sess.user_id,
+                    state.chunk_id,
+                    ActionToken.COLOR,
+                    board,  
+                )
         except Exception:
-            pass
+                pass
 
         await self.messaging.broadcast_chunk(state.chunk_id)
+    
 
      
 
@@ -99,11 +104,16 @@ class Hub:
             return
         state = sess.state
         moved = await self.movement.apply_move(state, dr, dc)
+        board = self.world.ensure_chunk(state.chunk_id)
+
         # record action token (non-blocking)
         token = MOVE_TOKENS.get((dr, dc))
         if token is not None:
-            append_player_action(sess.user_id, state.chunk_id, int(token))
-        
+            try:
+                append_player_action(sess.user_id, state.chunk_id, token, board)
+
+            except Exception:
+                pass        
         if moved.old_chunk_id and moved.old_chunk_id != state.chunk_id:
             # remove from old watchers
             self.sessions.detach_watcher(moved.old_chunk_id, ws)
@@ -111,8 +121,11 @@ class Hub:
             self.sessions.attach_watcher(state.chunk_id, ws)
             # send the new chunk’s matrix to this player
             await self.messaging.broadcast_chunk(state.chunk_id)
+            await self.messaging.maybe_send_message_at(ws)
+
             return
         # fanout updates
+        
         await self.messaging.broadcast_chunk(state.chunk_id)
         await self.messaging.maybe_send_message_at(ws)
 

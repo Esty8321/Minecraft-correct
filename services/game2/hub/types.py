@@ -10,7 +10,6 @@ class Coord:
     row: int
     col: int
 
-
 @dataclass
 class PlayerState:
     """Holds all runtime state for a connected player."""

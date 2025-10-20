@@ -310,7 +310,7 @@ async def unread_summary(me: str):
 @app.websocket("/ws")
 async def chat_endpoint(websocket: WebSocket):
     await websocket.accept()
-
+    print("I connected to the chat...")
     try:
         init_raw = await websocket.receive_text()
         init = json.loads(init_raw)
@@ -489,6 +489,7 @@ async def chat_endpoint(websocket: WebSocket):
             await websocket.send_text(json.dumps({"type": "error", "message": f"unknown type: {typ}"}))
 
     except WebSocketDisconnect:
+        print("failed")
         pass
     finally:
         # ניקוי חיבורים
