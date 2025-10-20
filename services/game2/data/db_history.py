@@ -1,7 +1,11 @@
 import os, json, time
 from enum import IntEnum
 from json import JSONDecodeError
-from ..core.settings import HISTORY_JSON_PATH
+from typing import Iterable, Sequence, Any
+import torch  
+import numpy as np  
+
+from ..core.settings import HISTORY_JSON_PATH  # אם יש גם W/H גלובליים, אפשר לייבא אותם כאן
 
 class ActionToken(IntEnum):
     RIGHT = 1
@@ -10,9 +14,8 @@ class ActionToken(IntEnum):
     DOWN  = 4
     COLOR = 5
     DM    = 6
-    SLEEP_1S = 7
-    SLEEP_1M = 8
-    SLEEP_1H = 9
+
+
 
 def _safe_load() -> dict:
     if not HISTORY_JSON_PATH.exists():
@@ -28,7 +31,6 @@ def _atomic_write(payload: dict) -> None:
     tmp = HISTORY_JSON_PATH.with_suffix(".tmp")
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2, ensure_ascii=False)
-    # נסה להחליף – אם ננעל, נסה כמה פעמים קצרות
     for _ in range(5):
         try:
             os.replace(tmp, HISTORY_JSON_PATH)
@@ -37,29 +39,54 @@ def _atomic_write(payload: dict) -> None:
             time.sleep(0.1)
     raise
 
-def _append_sleep_tokens(actions: list[int], delta_seconds: int) -> None:
-    if delta_seconds <= 0: return
-    hours, rem  = divmod(delta_seconds, 3600)
-    minutes, sec = divmod(rem, 60)
-    actions.extend([ActionToken.SLEEP_1H] * hours)
-    actions.extend([ActionToken.SLEEP_1M] * minutes)
-    actions.extend([ActionToken.SLEEP_1S] * sec)
+def _to_int_list(board_state: Any) -> list[int]:
+    try:
+        if isinstance(board_state, torch.Tensor):
+            return board_state.detach().cpu().numpy().astype(int).ravel().tolist()
+    except Exception:
+        pass
 
-def append_player_action(player_id: str, chunk_id: str, token: ActionToken, now_ts: int | None = None) -> None:
-    now_ts = now_ts or int(time.time())
+    try:
+        if isinstance(board_state, np.ndarray):
+            return board_state.astype(int).ravel().tolist()
+    except Exception:
+        pass
+
+    if isinstance(board_state, list):
+        if len(board_state) > 0 and isinstance(board_state[0], list):
+            flat: list[int] = []
+            for row in board_state:
+                flat.extend(int(x) for x in row)
+            return flat
+        return [int(x) for x in board_state]
+
+    if isinstance(board_state, (bytes, bytearray)):
+        return [int(b) for b in board_state]
+
+    return [int(board_state)]
+
+def append_player_action(
+    player_id: str,
+    chunk_id: str,
+    token: ActionToken | int,
+    board_state: Any,
+    now_ts: int | None = None
+) -> None:
+ 
+    ts = now_ts or int(time.time())
     data = _safe_load()
     pdata = data.setdefault(player_id, {})
     chunks = pdata.setdefault("chunks", {})
     cdata  = chunks.setdefault(chunk_id, {"actions": [], "last_ts": None})
 
-    last_ts = cdata.get("last_ts")
-    if isinstance(last_ts, int):
-        delta = max(0, now_ts - last_ts)
-        _append_sleep_tokens(cdata["actions"], delta)
+    action_entry = {
+        "ts": int(ts),
+        "token": int(token),
+        "board": _to_int_list(board_state),
+    }
+    cdata["actions"].append(action_entry)
 
-    cdata["actions"].append(int(token))
-    if len(cdata["actions"]) > 1000:
-        cdata["actions"] = cdata["actions"][-1000:]
+  
 
-    cdata["last_ts"] = now_ts
+    cdata["last_ts"] = int(ts)  
     _atomic_write(data)
