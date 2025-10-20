@@ -45,11 +45,21 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const dbg = (...args: any[]) => console.log("[VoxelGrid]", ...args);
+
   const getWebSocketUrl = useCallback((): string => {
-    if (serverUrl && serverUrl.startsWith("ws")) return serverUrl;
-    if (ENV_WS && ENV_WS.startsWith("ws")) return ENV_WS;
+    if (serverUrl && serverUrl.startsWith("ws")) {
+      dbg("WS base from prop serverUrl:", serverUrl);
+      return serverUrl;
+    }
+    if (ENV_WS && ENV_WS.startsWith("ws")) {
+      dbg("WS base from ENV VITE_GAME_WS:", ENV_WS);
+      return ENV_WS;
+    }
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${proto}//${window.location.host}/game/ws`;
+    const fallback = `${proto}//${window.location.host}/game/ws`;
+    dbg("WS base from location (fallback):", fallback);
+    return fallback;
   }, [serverUrl]);
 
   const connectWebSocket = useCallback(() => {
@@ -58,6 +68,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
       (wsRef.current.readyState === WebSocket.OPEN ||
         wsRef.current.readyState === WebSocket.CONNECTING)
     ) {
+      dbg("WS already open/connecting; skipping");
       return;
     }
 
@@ -65,17 +76,36 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
       const base = getWebSocketUrl();
       const token =
         authStorage.getToken?.() ?? localStorage.getItem("token") ?? "";
-      if (!token) return;
 
-      const url = `${base}?token=${encodeURIComponent(token)}`;
+      dbg("Pre-WS: base =", base);
+      dbg("Pre-WS: token exists?", !!token, "len:", token?.length || 0);
+
+      if (!base) {
+        setNotice("Missing WebSocket base URL");
+        setConnected(false);
+        return;
+      }
+      if (!token) {
+        setNotice("Missing auth token — please login again");
+        setConnected(false);
+        return;
+      }
+
+      const url = `${base}?token=${encodeURIComponent(token)}&jwt=${encodeURIComponent(token)}`;
+      dbg("Connecting WS to:", url);
+
       const ws = new WebSocket(url);
       wsRef.current = ws;
+      (window as any).ws = ws; 
 
       ws.onopen = () => {
+        dbg("WS open");
         setConnected(true);
         try {
           ws.send(JSON.stringify({ k: "whereami" }));
-        } catch {}
+        } catch (e) {
+          dbg("WS send whereami failed:", e);
+        }
       };
 
       ws.onmessage = (event) => {
@@ -83,7 +113,6 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
           const data = JSON.parse(event.data);
 
           if (typeof data.total_players === "number") {
-            // אם השרת שולח ספירה – עדיף ממספר השחקנים שחושבים מקומית
             setPlayerCount(data.total_players);
           }
 
@@ -114,10 +143,13 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
             setNotice(String(data.data.text));
             noticeTimerRef.current = setTimeout(() => setNotice(null), 3000);
           }
-        } catch {}
+        } catch (e) {
+          dbg("onmessage parse error:", e);
+        }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (ev) => {
+        console.log("[WS close]", { code: ev.code, reason: ev.reason, wasClean: ev.wasClean });
         setConnected(false);
         setGameState(null);
         setPlayerCount(0);
@@ -130,8 +162,12 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
         }
       };
 
-      ws.onerror = () => setConnected(false);
-    } catch {
+      ws.onerror = (e) => {
+        dbg("WS error", e);
+        setConnected(false);
+      };
+    } catch (e) {
+      dbg("connectWebSocket exception:", e);
       setConnected(false);
     }
   }, [getWebSocketUrl]);
@@ -213,6 +249,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
       try {
         wsRef.current?.close();
         wsRef.current = null;
+        (window as any).ws = null;
       } catch {}
     };
   }, [connectWebSocket]);
@@ -335,11 +372,13 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
         >
           {showChat && (
             <div className="h-full w-full relative">
-                <ChatRoot
-                  onClose={() => setShowChat(false)}
-                  playerId={authStorage.getUser()?.id ?? ""}
-                  currentChunkId={gameState?.chunk_id ?? sessionStorage.getItem("current_chunk_id") ?? null}
-                />
+              <ChatRoot
+                onClose={() => setShowChat(false)}
+                playerId={authStorage.getUser()?.id ?? ""}
+                currentChunkId={
+                  gameState?.chunk_id ?? sessionStorage.getItem("current_chunk_id") ?? null
+                }
+              />
             </div>
           )}
         </div>
@@ -353,7 +392,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
         {showChat ? <X size={22} /> : <MessageCircle size={22} />}
       </button>
 
-]      <div className="fixed bottom-4 left-4 z-[9999] text-sm text-slate-300 flex items-center gap-3 bg-slate-800/70 px-3 py-2 rounded-md backdrop-blur-sm border border-slate-700/50 shadow-lg">
+      <div className="fixed bottom-4 left-4 z-[9999] text-sm text-slate-300 flex items-center gap-3 bg-slate-800/70 px-3 py-2 rounded-md backdrop-blur-sm border border-slate-700/50 shadow-lg">
         {connected ? (
           <Wifi className="text-green-400" size={16} />
         ) : (
