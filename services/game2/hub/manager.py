@@ -21,6 +21,7 @@ from .movement import MovementService
 from .messaging import MessagingService
 from .helper import send_json
 
+from .bot import BotService
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +32,13 @@ class Hub:
         self.movement = MovementService(self.world)
         self.messaging = MessagingService(self.world, self.sessions)
         # global lock only for rare cross-service critical sections
+       
+        self.bots = BotService(self.world, self.movement, self.messaging)
+        
         self._global_lock = asyncio.Lock()
     
+    
+
     async def connect(self, ws: WebSocket) -> None:
         token = extract_token(ws)
         ok, reason, user_id = verify_token_or_reason(token)
@@ -41,6 +47,13 @@ class Hub:
             logger.debug(f"reject ws: {reason}")
             return
         
+        
+        if self.bots.is_running(user_id):
+            bot_state = self.bots.stop(user_id)
+        else:
+            bot_state = None
+            
+            
         existing_sockets = self.sessions.sockets_for_user(user_id)
         
         if existing_sockets:
@@ -49,19 +62,27 @@ class Hub:
             state = existing_session.state
             board = self.world.ensure_chunk(state.chunk_id)
             board[state.pos.row, state.pos.col] = state.visible_cell
+        
         else:
-            chunk_id, spawn = await self.world.get_spawn_position(user_id)
-            state = await self.world.spawn_player(user_id, chunk_id,spawn)
+            if bot_state is not None:
+                state = bot_state
+            else:
+                chunk_id, spawn = await self.world.get_spawn_position(user_id)
+                state = await self.world.spawn_player(user_id, chunk_id,spawn)
         self.sessions.add(ws, PlayerSession( state=state))
         await self.messaging.broadcast_chunk(state.chunk_id)
            
     async def disconnect(self, ws: WebSocket) -> None:
         sess = self.sessions.pop(ws)
         if not sess:
-         return
-        await self.world.despawn_player(sess.state, user_id=sess.state.user_id)
-        logger.info(f"Player {sess.state.user_id} disconnected from {sess.state.chunk_id}")
+            return
+        user_id = sess.state.user_id
+     
+        await self.world.despawn_player(sess.state, user_id=sess.state.user_id)##check if I realy need it??
 
+        if len(self.sessions.sockets_for_user(user_id)) == 0:
+            self.bots.start(user_id, sess.state)
+            
     async def move(self, ws: WebSocket, dr: int, dc: int) -> None:
         sess = self.sessions.get(ws)
         if not sess:
@@ -95,35 +116,93 @@ class Hub:
             "total_players": self.sessions.player_count(),
             }
         await send_json(ws, payload)
-        
-        
-    async def color_plus_plus(self, ws: WebSocket) -> None:
-        sess = self.sessions.get(ws)
-        if not sess:
-            return
+   
+    
+    
+    
+    async def _color_plus_plus_core(self, sess:PlayerSession):
+        """Shared color++ logic for both human players and bots."""
+        import random, torch
+        from ..core.bits import make_color, set_bit, get_bit, with_player
+        from ..core.settings import DTYPE, BIT_HAS_LINK
+        from ..data.db_chunks import save_chunk
+        from ..data.db_history import append_player_action, ActionToken
+
         state = sess.state
         board = self.world.ensure_chunk(state.chunk_id)
+
+        # Random new base color
         r, g, b = (random.randint(0, 3) for _ in range(3))
         new_base_color_val = int(make_color(r, g, b))
-        old_under_val = int(state.underlying_cell.item()) 
+
+        old_under_val = int(state.underlying_cell.item())
+        # Keep message/treasure bit if exists
         if get_bit(old_under_val, BIT_HAS_LINK):
             new_base_color_val = int(set_bit(new_base_color_val, BIT_HAS_LINK, True))
+
+        # Update underlying cell
         state.underlying_cell = torch.tensor(new_base_color_val, dtype=DTYPE)
 
+        # Compose visible cell (player + color)
         visible_with_player_val = int(with_player(state.color))
         if get_bit(new_base_color_val, BIT_HAS_LINK):
             visible_with_player_val = int(set_bit(visible_with_player_val, BIT_HAS_LINK, True))
 
         board[state.pos.row, state.pos.col] = torch.tensor(visible_with_player_val, dtype=DTYPE)
         save_chunk(state.chunk_id, board)
+
+        # Log in history (non-blocking)
         try:
-                append_player_action(
-                    sess.state.user_id,
-                    state.chunk_id,
-                    ActionToken.COLOR,
-                    board,  
-                )
+            append_player_action(
+                state.user_id,
+                state.chunk_id,
+                ActionToken.COLOR,
+                board,
+            )
         except Exception:
-                pass
+            pass
+
+        # Broadcast update to all clients in same chunk
         await self.messaging.broadcast_chunk(state.chunk_id)
+
+
+
+    async def color_plus_plus(self, ws):
+        """Called from player WebSocket (via /ws)."""
+        sess = self.sessions.get(ws)
+        if not sess:
+            return
+        await self._color_plus_plus_core(sess)
+
+        
+    # async def color_plus_plus(self, ws: WebSocket) -> None:
+    #     sess = self.sessions.get(ws)
+    #     if not sess:
+    #         return
+    #     state = sess.state
+    #     board = self.world.ensure_chunk(state.chunk_id)
+    #     r, g, b = (random.randint(0, 3) for _ in range(3))
+    #     new_base_color_val = int(make_color(r, g, b))
+    #     old_under_val = int(state.underlying_cell.item()) 
+    #     if get_bit(old_under_val, BIT_HAS_LINK):
+    #         new_base_color_val = int(set_bit(new_base_color_val, BIT_HAS_LINK, True))
+    #     state.underlying_cell = torch.tensor(new_base_color_val, dtype=DTYPE)
+
+    #     visible_with_player_val = int(with_player(state.color))
+    #     if get_bit(new_base_color_val, BIT_HAS_LINK):
+    #         visible_with_player_val = int(set_bit(visible_with_player_val, BIT_HAS_LINK, True))
+
+    #     board[state.pos.row, state.pos.col] = torch.tensor(visible_with_player_val, dtype=DTYPE)
+    #     save_chunk(state.chunk_id, board)
+    #     try:
+    #             append_player_action(
+    #                 sess.state.user_id,
+    #                 state.chunk_id,
+    #                 ActionToken.COLOR,
+    #                 board,  
+    #             )
+    #     except Exception:
+    #             pass
+    #     await self.messaging.broadcast_chunk(state.chunk_id)
+        
         
