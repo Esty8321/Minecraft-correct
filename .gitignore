@@ -57,6 +57,8 @@ build/
 # ======================
 data/
 data/**
+data/players.db
+data/world.db
 
 # ======================
 # OS / temp files
@@ -83,3 +85,4 @@ data/*.db-shm
 data/*.db-wal
 data/history.json
 
+bot_gru

@@ -46,15 +46,41 @@ class GRUPolicy(nn.Module):
         self.cnn = SmallBoardCNN(BOARD_FEAT_DIM)
         self.gru = nn.GRU(INPUT_DIM, HIDDEN_DIM, batch_first=True)
         self.head = nn.Linear(HIDDEN_DIM, NUM_ACTIONS)
+     
+    # def forward_step(
+    #     self,
+    #     board: torch.Tensor,     # (1,1,H,W)
+    #     action_token: int,       # הפעולה האחרונה שבוצעה (או 0 בתחילת רצף)
+    #     user_idx: int,           # אינדקס משתמש
+    #     h: Optional[torch.Tensor] = None,  # (1,1,HIDDEN_DIM)
+    # ) -> Tuple[torch.Tensor, torch.Tensor]:
+    #     # הכנות
+    #     bf = self.cnn(board)                 # (1,128)
+    #     abits = int_to_8bits(int(action_token))  # (1,8)
+    #     uemb = self.user_emb(torch.tensor([user_idx]))  # (1,32)
+
+    #     x = torch.cat([bf, abits, uemb], dim=1)  # (1,168)
+    #     x = x.unsqueeze(1)                       # (1,1,168) — time=1
+
+    #     out, h_new = self.gru(x, h)              # out: (1,1,128); h_new: (1,1,128)
+    #     logits = self.head(out.squeeze(1))       # (1,NUM_ACTIONS)
+    #     return logits, h_new  # מחזיר לוגיטים לפעולה הבאה + hidden החדש
 
     def forward_step(
-        self,
-        board: torch.Tensor,     # (1,1,H,W)
-        action_token: int,       # הפעולה האחרונה שבוצעה (או 0 בתחילת רצף)
-        user_idx: int,           # אינדקס משתמש
-        h: Optional[torch.Tensor] = None,  # (1,1,HIDDEN_DIM)
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # הכנות
+    self,
+    board: torch.Tensor,     # (1,1,H,W) expected
+    action_token: int,       # last action (or 0 at start)
+    user_idx: int,           # user index
+    h: Optional[torch.Tensor] = None,  # (1,1,HIDDEN_DIM)
+) -> Tuple[torch.Tensor, torch.Tensor]:
+        # ---- FIX START ----
+        # Ensure correct shape: (B, 1, H, W)
+        if board.dim() == 5:
+            board = board.squeeze(0)  # remove the extra dimension (1,1,H,W)
+        elif board.dim() == 3:
+            board = board.unsqueeze(0)  # add batch dimension if missing
+        # ---- FIX END ----
+
         bf = self.cnn(board)                 # (1,128)
         abits = int_to_8bits(int(action_token))  # (1,8)
         uemb = self.user_emb(torch.tensor([user_idx]))  # (1,32)
@@ -64,4 +90,4 @@ class GRUPolicy(nn.Module):
 
         out, h_new = self.gru(x, h)              # out: (1,1,128); h_new: (1,1,128)
         logits = self.head(out.squeeze(1))       # (1,NUM_ACTIONS)
-        return logits, h_new  # מחזיר לוגיטים לפעולה הבאה + hidden החדש
+        return logits, h_new  # return logits for next action + new hidden

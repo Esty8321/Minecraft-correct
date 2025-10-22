@@ -72,17 +72,41 @@ class Hub:
         self.sessions.add(ws, PlayerSession( state=state))
         await self.messaging.broadcast_chunk(state.chunk_id)
            
+    
+    # async def disconnect(self, ws: WebSocket) -> None:
+    #     sess = self.sessions.pop(ws)
+    #     if not sess:
+    #         return
+    #     user_id = sess.state.user_id
+     
+    #     await self.world.despawn_player(sess.state, user_id=sess.state.user_id)##check if I realy need it??
+
+    #     if len(self.sessions.sockets_for_user(user_id)) == 0:
+    #         self.bots.start(user_id, sess.state)
+            
+   
     async def disconnect(self, ws: WebSocket) -> None:
         sess = self.sessions.pop(ws)
         if not sess:
             return
-        user_id = sess.state.user_id
-     
-        await self.world.despawn_player(sess.state, user_id=sess.state.user_id)##check if I realy need it??
 
-        if len(self.sessions.sockets_for_user(user_id)) == 0:
-            self.bots.start(user_id, sess.state)
-            
+        user_id = sess.state.user_id
+        chunk_id = sess.state.chunk_id
+
+        # Despawn the player visually (optional)
+        await self.world.despawn_player(sess.state, user_id=user_id)
+        logger.info(f"Player {user_id} disconnected from {chunk_id}")
+
+        # --- NEW: Check if the user has no more sockets ---
+        remaining = self.sessions.sockets_for_user(user_id)
+        if not remaining:
+            # Start the bot to play instead
+            if hasattr(self, "bots"):
+                logger.info(f"Starting bot for {user_id}")
+                await self.bots.start(user_id, sess.state)
+            else:
+                logger.warning("No BotService attached to Hub")
+
     async def move(self, ws: WebSocket, dr: int, dc: int) -> None:
         sess = self.sessions.get(ws)
         if not sess:

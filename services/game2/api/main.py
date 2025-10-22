@@ -38,14 +38,14 @@ async def _handle_command(ws: WebSocket, data: IncomingMsg) -> None:
     except Exception as e:
         logger.exception("Action failed for key=%s: %s", k, e)
         await _safe_send_json(ws, {"ok": False, "error": "action_failed", "msg": str(e)})
-
+   
 
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket) -> None:
     try:
         await ws.accept()
         await hub.connect(ws)  
-    except Exception as e:
+    except Exception as e:    
         logger.exception("accept/connect failed: %s", e)
         await ws.close(code=1011, reason="hub.connect error")
         return
