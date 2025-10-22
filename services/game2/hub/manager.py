@@ -116,93 +116,35 @@ class Hub:
             "total_players": self.sessions.player_count(),
             }
         await send_json(ws, payload)
-   
-    
-    
-    
-    async def _color_plus_plus_core(self, sess:PlayerSession):
-        """Shared color++ logic for both human players and bots."""
-        import random, torch
-        from ..core.bits import make_color, set_bit, get_bit, with_player
-        from ..core.settings import DTYPE, BIT_HAS_LINK
-        from ..data.db_chunks import save_chunk
-        from ..data.db_history import append_player_action, ActionToken
-
+        
+    async def color_plus_plus(self, ws: WebSocket) -> None:
+        sess = self.sessions.get(ws)
+        if not sess:
+            return
         state = sess.state
         board = self.world.ensure_chunk(state.chunk_id)
-
-        # Random new base color
         r, g, b = (random.randint(0, 3) for _ in range(3))
         new_base_color_val = int(make_color(r, g, b))
-
-        old_under_val = int(state.underlying_cell.item())
-        # Keep message/treasure bit if exists
+        old_under_val = int(state.underlying_cell.item()) 
         if get_bit(old_under_val, BIT_HAS_LINK):
             new_base_color_val = int(set_bit(new_base_color_val, BIT_HAS_LINK, True))
-
-        # Update underlying cell
         state.underlying_cell = torch.tensor(new_base_color_val, dtype=DTYPE)
 
-        # Compose visible cell (player + color)
         visible_with_player_val = int(with_player(state.color))
         if get_bit(new_base_color_val, BIT_HAS_LINK):
             visible_with_player_val = int(set_bit(visible_with_player_val, BIT_HAS_LINK, True))
 
         board[state.pos.row, state.pos.col] = torch.tensor(visible_with_player_val, dtype=DTYPE)
         save_chunk(state.chunk_id, board)
-
-        # Log in history (non-blocking)
         try:
-            append_player_action(
-                state.user_id,
-                state.chunk_id,
-                ActionToken.COLOR,
-                board,
-            )
+                append_player_action(
+                    sess.state.user_id,
+                    state.chunk_id,
+                    ActionToken.COLOR,
+                    board,  
+                )
         except Exception:
-            pass
-
-        # Broadcast update to all clients in same chunk
+                pass
         await self.messaging.broadcast_chunk(state.chunk_id)
-
-
-
-    async def color_plus_plus(self, ws):
-        """Called from player WebSocket (via /ws)."""
-        sess = self.sessions.get(ws)
-        if not sess:
-            return
-        await self._color_plus_plus_core(sess)
-
-        
-    # async def color_plus_plus(self, ws: WebSocket) -> None:
-    #     sess = self.sessions.get(ws)
-    #     if not sess:
-    #         return
-    #     state = sess.state
-    #     board = self.world.ensure_chunk(state.chunk_id)
-    #     r, g, b = (random.randint(0, 3) for _ in range(3))
-    #     new_base_color_val = int(make_color(r, g, b))
-    #     old_under_val = int(state.underlying_cell.item()) 
-    #     if get_bit(old_under_val, BIT_HAS_LINK):
-    #         new_base_color_val = int(set_bit(new_base_color_val, BIT_HAS_LINK, True))
-    #     state.underlying_cell = torch.tensor(new_base_color_val, dtype=DTYPE)
-
-    #     visible_with_player_val = int(with_player(state.color))
-    #     if get_bit(new_base_color_val, BIT_HAS_LINK):
-    #         visible_with_player_val = int(set_bit(visible_with_player_val, BIT_HAS_LINK, True))
-
-    #     board[state.pos.row, state.pos.col] = torch.tensor(visible_with_player_val, dtype=DTYPE)
-    #     save_chunk(state.chunk_id, board)
-    #     try:
-    #             append_player_action(
-    #                 sess.state.user_id,
-    #                 state.chunk_id,
-    #                 ActionToken.COLOR,
-    #                 board,  
-    #             )
-    #     except Exception:
-    #             pass
-    #     await self.messaging.broadcast_chunk(state.chunk_id)
         
         
