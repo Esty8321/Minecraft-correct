@@ -290,10 +290,23 @@ async def get_active_player(user_token:str) ->List[Dict]:
                 print(f"[CHAT] nearest-player failed {near_resp.status_code}")
                 nearest_id = None
         players = [me]
+        players_from_auth = await get_players_from_auth()
+        print("players from auth ", players_from_auth)
         if nearest_id:
+            nearest_user = next(
+                (p for p in players_from_auth if p["id"] == nearest_id),
+                None
+            )
+            
+            if nearest_user:
+                username = nearest_user.get("username", f"Player {nearest_id}")
+            else:
+                username = f"Player {nearest_id}"  # fallback
+
+
             players.append({
                 "id": nearest_id,
-                "username": f"Player {nearest_id}",
+                "username": username,
                 "status": "online"
             })
             
@@ -317,9 +330,6 @@ async def get_active_players(token: str = Query(None)):
         pid = p.get("id") or p.get("player_id") or p.get("name")
         result.append({**p, "is_connected": bool(active_players.get(pid))})
     return result
-    
-    
-
 # @app.get("/whoami")
 # async def whoami(token: str):
 #     pid = TOKEN_TO_PLAYER.get(token)
@@ -545,6 +555,28 @@ async def chat_endpoint(websocket: WebSocket):
 
         selected_partner[player_id] = None
         print(f"[WS] {player_id} disconnected")
+
+
+
+@app.post("/player-changed-chunk")
+async def player_changed_chunk(data: dict):
+    """
+    נקרא משירות המשחק כאשר שחקן עובר ללוח חדש.
+    """
+    user_id = data.get("user_id")
+    chunk_id = data.get("chunk_id")
+    if not user_id or not chunk_id:
+        return {"ok": False, "error": "missing user_id or chunk_id"}
+
+    print(f"[CHAT] השחקן {user_id} עבר ללוח {chunk_id}")
+
+    # כאן אפשר לשמור במילון זמני מי נמצא בכל לוח
+    # לדוגמה:
+    # player_chunk[user_id] = chunk_id
+
+    # בפשטות, בפעם הבאה שהלקוח יקרא /players,
+    # הפונקציה get_active_player כבר תחשב מחדש מי הקרוב ביותר.
+    return {"ok": True}   
 
 # ---------- תחזוקה (דמו) ----------
 async def heartbeat():

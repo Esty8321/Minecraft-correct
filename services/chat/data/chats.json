@@ -70,7 +70,8 @@
           "quoted_id": null,
           "reactions": {},
           "read_by": [
-            "00000010"
+            "00000010",
+            "00000001"
           ],
           "deleted": false
         },
@@ -83,7 +84,8 @@
           "quoted_id": null,
           "reactions": {},
           "read_by": [
-            "00000010"
+            "00000010",
+            "00000001"
           ],
           "deleted": false
         },
@@ -262,7 +264,8 @@
           "quoted_id": null,
           "reactions": {},
           "read_by": [
-            "00000010"
+            "00000010",
+            "00000001"
           ],
           "deleted": false
         },
@@ -373,7 +376,8 @@
           "quoted_id": null,
           "reactions": {},
           "read_by": [
-            "00000010"
+            "00000010",
+            "00000001"
           ],
           "deleted": false
         },
@@ -425,7 +429,74 @@
           "quoted_id": null,
           "reactions": {},
           "read_by": [
-            "00000100"
+            "00000100",
+            "00000001"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-20T15:17:00.510Z|00000110|okey",
+          "from": "00000110",
+          "to": "00000011",
+          "message": "okey",
+          "timestamp": "2025-10-20T15:17:00.510Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000110"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-20T15:17:08.828Z|00000110|lets got",
+          "from": "00000110",
+          "to": "00000011",
+          "message": "lets got",
+          "timestamp": "2025-10-20T15:17:08.828Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000110"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-20T15:17:19.672Z|00000110|and try do the best",
+          "from": "00000110",
+          "to": "00000011",
+          "message": "and try do the best",
+          "timestamp": "2025-10-20T15:17:19.672Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000110"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-20T16:08:22.953Z|00000001|hi adina ,what happen with you?",
+          "from": "00000001",
+          "to": "00000010",
+          "message": "hi adina ,what happen with you?",
+          "timestamp": "2025-10-20T16:08:22.953Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000001",
+            "00000010"
+          ],
+          "deleted": false
+        },
+        {
+          "id": "2025-10-21T08:20:10.682Z|00000001|hyu",
+          "from": "00000001",
+          "to": "00000100",
+          "message": "hyu",
+          "timestamp": "2025-10-21T08:20:10.682Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000001"
           ],
           "deleted": false
         }

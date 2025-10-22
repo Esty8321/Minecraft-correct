@@ -18,9 +18,6 @@ logger = logging.getLogger(__name__)
 JWT_SECRET = os.getenv("AUTH_JWT_SECRET", "CHANGE_ME_123456789")
 JWT_ALG = os.getenv("JWT_ALG", "HS256")
 
-# ---- movement helpers ----
-
-
 def is_empty(board: torch.Tensor, r: int, c: int) -> bool:
     return int(get_bit(board[r, c], BIT_IS_PLAYER)) == 0
 
@@ -64,9 +61,6 @@ def random_empty_cell(board: torch.Tensor) -> Coord:
             return Coord(r, c)
         return Coord(H // 2, W // 2)
 
-  # ---- auth helpers ----
-
-
 def extract_token(ws: WebSocket) -> Optional[str]:
     token = ws.query_params.get("token")
     if token:
@@ -87,21 +81,16 @@ def verify_token_or_reason(token: Optional[str]) -> Tuple[bool, str, Optional[st
         return True, "", user_id
     except JWTError as e:
         return False, f"invalid token: {e}", None
-    except Exception as e: # pragma: no cover
+    except Exception as e: 
         return False, f"token error: {e}", None
 
-
-# ---- unified sending helpers ----
 async def send_json(ws: WebSocket, payload: Any) -> bool:
     try:
         await ws.send_text(json.dumps(payload, ensure_ascii=False))
         return True
-    except Exception as e: # best-effort
+    except Exception as e:
         logger.debug(f"send_json failed: {e}")
         return False
-
-
-
 
 async def fanout_text(watchers: Set[WebSocket], text: str) -> Set[WebSocket]:
     dead: Set[WebSocket] = set()

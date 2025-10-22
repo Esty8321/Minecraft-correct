@@ -13,6 +13,7 @@ class Coord:
 @dataclass
 class PlayerState:
     """Holds all runtime state for a connected player."""
+    user_id: str#add it so erase the user_id from the sessionstate
     chunk_id: str
     pos: Coord
     visible_cell: torch.Tensor

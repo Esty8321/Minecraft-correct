@@ -59,6 +59,7 @@ def find_nearest_player_in_chunk(current_id: str)->Optional[str]:
         return None
     board = db_chunks.load_chunk(chunk_id)
     nearest = None
+    nearest_dist = float("inf")
     for pid, r, c in others:
         dist = math.hypot(r - my_row, c - my_col)
         if dist < nearest_dist:

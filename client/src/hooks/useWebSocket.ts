@@ -247,10 +247,10 @@ export function useWebSocket(): UseWS {
     let stop = false
     const tick = async () => {
       try {
-        const token = localStorage.getItem("token") || authStorage.getToken()
+        const token = localStorage.getItem("auth_token") || authStorage.getToken()
         if(!token) return
 
-
+        console.log("the token is---:",token)
         const res = await fetch(`${apiBase()}/players?token=${encodeURIComponent(token)}`)
         const data = await res.json()
         if (!stop) setActivePlayers(data)
@@ -260,6 +260,53 @@ export function useWebSocket(): UseWS {
     const id = setInterval(tick, 3000)
     return () => { stop = true; clearInterval(id) }
   }, [])
+
+
+    // --- NEW: עדכון רשימת השחקנים מיד כאשר ה-chunk מתחלף ---
+  useEffect(() => {
+    const handleChunkChange = async () => {
+      const token = localStorage.getItem("auth_token") || authStorage.getToken();
+      const user = authStorage.getUser();
+      const newChunkId = sessionStorage.getItem("current_chunk_id");
+
+      if (!token || !user?.id || !newChunkId) return;
+
+      try {
+        const res = await fetch(`http://127.0.0.1:7003/player-changed-chunk`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: user.id,
+            chunk_id: newChunkId,
+          }),
+        });
+
+        const data = await res.json();
+        if (data.ok) {
+          // אם השרת מחזיר את רשימת השחקנים או את הקרוב החדש
+          if (data.nearest || data.me) {
+            console.log("[CHAT] עדכון רשימת שחקנים בעקבות שינוי לוח:", data);
+            const updated = [];
+            if (data.me) updated.push(data.me);
+            if (data.nearest) updated.push(data.nearest);
+            setActivePlayers(updated);
+          } else {
+            // fallback – נקרא שוב ל /players
+            const refetch = await fetch(`http://127.0.0.1:7003/players?token=${encodeURIComponent(token)}`);
+            const refData = await refetch.json();
+            if (Array.isArray(refData)) setActivePlayers(refData);
+          }
+        }
+
+      } catch (err) {
+        console.error("[CHAT] שגיאה בעדכון שחקנים בעת שינוי לוח:", err);
+      }
+    };
+
+    // נקשיב לאירוע custom מהמשחק
+    window.addEventListener("chunkChanged", handleChunkChange);
+    return () => window.removeEventListener("chunkChanged", handleChunkChange);
+  }, []);
 
   const selectPlayer = useCallback((p: Player) => {
     setSelectedPlayer(p)

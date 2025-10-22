@@ -1,20 +1,23 @@
-// src/components/TopBar.tsx
 import { authStorage } from "../utils/auth";
+import { useNavigate } from "react-router-dom";
+
 declare global {
-  interface Window{
-    ws ?: WebSocket | null
+  interface Window {
+    ws?: WebSocket | null;
   }
 }
+
 export default function TopBar() {
+  const navigate = useNavigate();
   const isAuthed = authStorage.isAuthenticated();
-  
+
   const onLogout = () => {
-    if (window.ws){
-      window.ws.close()
-      window.ws = null
+    if (window.ws) {
+      window.ws.close();
+      window.ws = null;
     }
     authStorage.clear();
-    window.location.href = "/auth";
+    navigate("/login"); 
   };
 
   return (
