@@ -157,7 +157,7 @@ async def get_players():
 
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
-import jwt, os
+import os
 
 JWT_SECRET = os.getenv("AUTH_JWT_SECRET", "CHANGE_ME_123456789")
 
