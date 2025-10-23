@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Set, Tuple
 from fastapi import WebSocket
 
-
 from .types import PlayerState
 
 @dataclass
@@ -13,8 +12,6 @@ class PlayerSession:
 
 class SessionStore:
     """Keeps track of live sockets, their sessions, and chunk watchers."""
-
-
     def __init__(self) -> None:
         self.sockets: Set[WebSocket] = set()
         self.by_ws: Dict[WebSocket, PlayerSession] = {}
@@ -42,27 +39,41 @@ class SessionStore:
                     self.by_user.pop(sess.state.user_id, None)
         return sess
 
-
     def attach_watcher(self, chunk_id: str, ws: WebSocket) -> None:
         self.watchers_by_chunk.setdefault(chunk_id, set()).add(ws)
-
 
     def detach_watcher(self, chunk_id: str, ws: WebSocket) -> None:
         self.watchers_by_chunk.get(chunk_id, set()).discard(ws)
 
-
     def watchers(self, chunk_id: str) -> Set[WebSocket]:
         return self.watchers_by_chunk.get(chunk_id, set())
 
-
     def player_count(self) -> int:
         return len(self.by_user)
-    
+
     def find_by_user_id(self, user_id: str):
          for ws, sess in self.by_ws.items():
              if sess.state.user_id == user_id:
                  return ws, sess
          return None
 
-    def sockets_for_user(self, user_id: str) -> Set[WebSocket]:##check if I realy need it
+    def sockets_for_user(self, user_id: str) -> Set[WebSocket]:
         return self.by_user.get(user_id, set())
+
+    def count_players_in_chunk(self, chunk_id: str) -> int:
+        uids: Set[str] = set()
+        for ws in self.watchers(chunk_id):
+            sess = self.by_ws.get(ws)
+            if sess:
+                uids.add(sess.state.user_id)
+        return len(uids)
+
+    async def fanout_chunk_text(self, chunk_id: str, text: str) -> None:
+        dead: Set[WebSocket] = set()
+        for ws in list(self.watchers(chunk_id)):
+            try:
+                await ws.send_text(text)
+            except Exception:
+                dead.add(ws)
+        for ws in dead:
+            self.pop(ws)

@@ -8,23 +8,17 @@ import asyncio
 import json
 import os
 import httpx
-from services.game.db_history import append_player_action, TOKEN_DM
+from services.game2.data.db_history import append_player_action, ActionToken
+
 
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://127.0.0.1:7001")
 GAME_SERVICE_URL = "http://127.0.0.1:7002"
 
-# ---------- נתיבי קבצים (מוחלטים) ----------
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR     = os.path.join(BASE_DIR, "data")
 CHATS_PATH   = os.path.join(DATA_DIR, "chats.json")
 
 
-# os.makedirs(DATA_DIR, exist_ok=True)
-# if not os.path.exists(CHATS_PATH):
-#     with open(CHATS_PATH, "w", encoding="utf-8") as f:
-#         json.dump({"chats": [{"chat_id": "chat1", "messages": []}]}, f, ensure_ascii=False, indent=2)
-
-# ---------- עזר לקבצי JSON ----------
 def load_json(path: str) -> dict:
     if not os.path.exists(path):
         return {}
@@ -44,45 +38,39 @@ def save_json(path: str, data: dict) -> None:
 #         return auth.split(" ", 1)[1].strip()
 #     return ws.query_params.get("token")
 
-# ---------- נתונים מהדיסק ----------
 # players_data = load_json(PLAYERS_PATH)
 DEFAULT_CHATS = {"chats": [{"chat_id": "chat1", "messages": []}]}
 chats_data = load_json(CHATS_PATH) or DEFAULT_CHATS
 # tokens_data = load_json(TOKENS_PATH)
 
-# ---------- עזר מזהה ----------
 def _msg_id(ts: str, fr: str, text: str) -> str:
     return f"{ts}|{fr}|{text}"
+
 
 def _retrofit_messages():
     msgs: List[dict] = chats_data.get("chats", [{}])[0].get("messages", [])
     changed = False
     for m in msgs:
-        # timestamp + id
         if "timestamp" not in m:
             m["timestamp"] = datetime.utcnow().isoformat() + "Z"; changed = True
         if "id" not in m:
             m["id"] = _msg_id(m["timestamp"], m.get("from",""), m.get("message","")); changed = True
 
-        # read_by
         if "read_by" not in m or not isinstance(m.get("read_by"), list):
             sender = m.get("from")
             m["read_by"] = [sender] if sender else []
             changed = True
 
-        # reactions (ממפה likes ישנים, אם קיימים)
         if "reactions" not in m or not isinstance(m.get("reactions"), dict):
             m["reactions"] = {}
             changed = True
 
         if "likes" in m:
-            # likes כ-List => כולם "up" (למעט השולח)
             if isinstance(m["likes"], list):
                 for pid in m["likes"]:
                     if pid and isinstance(pid, str) and pid != m.get("from"):
                         m["reactions"][pid] = "up"
                 changed = True
-            # likes כ-Dict עם 👍/👎
             if isinstance(m["likes"], dict):
                 ups = m["likes"].get("👍", []) or []
                 downs = m["likes"].get("👎", []) or []
@@ -470,7 +458,7 @@ async def chat_endpoint(websocket: WebSocket):
                 chunk_id = data.get("chunkId")  # ← מגיע מהקליינט בצ'אט הפרטי
                 if isinstance(chunk_id, str) and chunk_id:
                     try:
-                        append_player_action(player_id, chunk_id, TOKEN_DM)
+                        append_player_action(player_id, chunk_id, ActionToken.DM)
                     except Exception as e:
                         print(f"[CHAT] Failed to append DM action for {player_id} on {chunk_id}: {e}")
                 else:
@@ -541,7 +529,7 @@ async def chat_endpoint(websocket: WebSocket):
 
     except WebSocketDisconnect:
         print("failed")
-        pass
+        
     finally:
         # ניקוי חיבורים
         try:

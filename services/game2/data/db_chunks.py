@@ -8,17 +8,44 @@ class ChunkDB:
     """Persist chunks (boards) as flat uint8 blobs in SQLite (world.db)."""
 
     def __init__(self, db_path=DB_PATH):
-        self.conn = sqlite3.connect(db_path, isolation_level=None)
+        self.db_path = db_path
+        self.conn = sqlite3.connect(self.db_path, isolation_level=None)
         self.conn.execute("PRAGMA journal_mode=WAL")
+
         self.conn.execute("""
         CREATE TABLE IF NOT EXISTS chunks (
           id TEXT PRIMARY KEY,
-          w INTEGER NOT NULL,
-          h INTEGER NOT NULL,
           data BLOB NOT NULL,
           last_used INTEGER
         )
         """)
+
+        self._maybe_migrate_old_schema()
+
+        try:
+            cols = [r[1] for r in self.conn.execute("PRAGMA table_info(chunks)")]
+        except Exception as e:
+            print(f"[db_chunks] debug failed: {e}")
+
+    def _maybe_migrate_old_schema(self) -> None:
+        try:
+            cols = [r[1] for r in self.conn.execute("PRAGMA table_info(chunks)")]
+        except sqlite3.OperationalError:
+            cols = []
+        if "w" in cols or "h" in cols:
+            self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS chunks_new (
+              id TEXT PRIMARY KEY,
+              data BLOB NOT NULL,
+              last_used INTEGER
+            )
+            """)
+            self.conn.execute("""
+            INSERT INTO chunks_new (id, data, last_used)
+            SELECT id, data, last_used FROM chunks
+            """)
+            self.conn.execute("DROP TABLE chunks")
+            self.conn.execute("ALTER TABLE chunks_new RENAME TO chunks")
 
     def save_chunk(self, cid: str, data_t: torch.Tensor) -> None:
         assert data_t.dtype == torch.uint8 and data_t.shape == (H, W)
@@ -26,21 +53,19 @@ class ChunkDB:
         blob = arr.tobytes(order="C")
         now  = int(time.time())
         self.conn.execute("""
-            INSERT INTO chunks (id, w, h, data, last_used)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO chunks (id, data, last_used)
+            VALUES (?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
-              w=excluded.w,
-              h=excluded.h,
               data=excluded.data,
               last_used=excluded.last_used
-        """, (cid, W, H, blob, now))
+        """, (cid, blob, now))
 
     def load_chunk(self, cid: str) -> Optional[torch.Tensor]:
-        row = self.conn.execute("SELECT data, w, h FROM chunks WHERE id=?", (cid,)).fetchone()
+        row = self.conn.execute("SELECT data FROM chunks WHERE id=?", (cid,)).fetchone()
         if not row:
             return None
-        blob, w, h = row
-        arr = np.frombuffer(blob, dtype=np.uint8, count=w*h).reshape(h, w)
+        (blob,) = row
+        arr = np.frombuffer(blob, dtype=np.uint8, count=W*H).reshape(H, W)
         self.conn.execute("UPDATE chunks SET last_used=? WHERE id=?", (int(time.time()), cid))
         return torch.tensor(arr, dtype=DTYPE)
 

@@ -7,6 +7,7 @@ from .helper import in_bounds, edge_direction, edge_target_for_direction, neighb
 from .world import WorldService
 from ..data.db_chunks import save_chunk
 from  ..data.db_players import save_player_position
+
 @dataclass
 class MoveResult:
    moved: bool
@@ -18,9 +19,6 @@ class MovementService:
  
     async def apply_move(self, state: PlayerState, dr: int, dc: int) -> MoveResult:
         nr, nc = state.pos.row + dr, state.pos.col + dc
-       
-       #mabye here to do many things from the move function which find in the manager file
-       #but insert it for the small function not directly here ??
         if in_bounds(nr, nc):
             board = self.world.ensure_chunk(state.chunk_id)
             if not is_empty(board, nr, nc):
@@ -32,6 +30,7 @@ class MovementService:
         moved, old_chunk_id = await self._transfer_between_chunks(state, direction)
         return MoveResult(moved, old_chunk_id if moved else None)
     
+
     async def _move_within_chunk(self, state: PlayerState, board: torch.Tensor, nr: int, nc: int) -> None:
         board[state.pos.row, state.pos.col] = state.underlying_cell
         new_under, new_vis = self.world.compose_entry_cells(board, nr, nc, state.color)
@@ -41,6 +40,7 @@ class MovementService:
         state.underlying_cell = new_under
         state.visible_cell = new_vis
         save_player_position(state.user_id ,state.chunk_id,state.pos.row,state.pos.col)
+    
     
     async def _transfer_between_chunks(self, state: PlayerState, direction: Direction) -> Tuple[bool, str]:
         old_chunk_id = state.chunk_id

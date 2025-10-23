@@ -1,7 +1,7 @@
 import json, os
 from json import JSONDecodeError
 from ..core.settings import MESSAGES_JSON_PATH
-from ..models.message import Message
+from ..hub.message import Message
 
 def _safe_load() -> dict:
     if not MESSAGES_JSON_PATH.exists():
@@ -11,6 +11,7 @@ def _safe_load() -> dict:
             return json.load(f)
     except (JSONDecodeError, ValueError):
         return {}
+
 
 def save_message(message: Message) -> None:
     """Atomically append/replace a message at a specific (chunk,row,col)."""
@@ -22,6 +23,7 @@ def save_message(message: Message) -> None:
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(messages, f, indent=2, ensure_ascii=False)
     os.replace(tmp, MESSAGES_JSON_PATH)
+
 
 def load_message(chunk_id: str, row: int, col: int) -> dict | None:
     messages = _safe_load()

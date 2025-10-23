@@ -35,7 +35,7 @@ def normalize_users(users: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         if isinstance(uid, int):
             u["id"] = to_bin8(uid)
         elif isinstance(uid, str) and BIN8_RE.fullmatch(uid):
-            pass
+            continue
         else:
             try:
                 n = int(uid)

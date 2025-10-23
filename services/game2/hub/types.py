@@ -1,6 +1,6 @@
 import torch
-from typing import Dict, Optional, Set, Tuple, Literal, TypedDict
-from dataclasses import dataclass
+from typing import Dict, NotRequired, Optional, Set, Tuple, Literal, TypedDict
+from dataclasses import dataclass, field
 from ..data.db_history import  ActionToken
 
 
@@ -13,12 +13,13 @@ class Coord:
 @dataclass
 class PlayerState:
     """Holds all runtime state for a connected player."""
-    user_id: str#add it so erase the user_id from the sessionstate
+    user_id: str
     chunk_id: str
     pos: Coord
     visible_cell: torch.Tensor
     underlying_cell: torch.Tensor
     color: torch.Tensor
+    last_msg_pos: Optional[Tuple[str, int, int]] = field(default=None)  
 
 class MatrixPayload(TypedDict):
     """Payload for sending board matrix updates to clients."""
@@ -40,8 +41,7 @@ class ErrorPayload(TypedDict):
 
 class IncomingMsg(TypedDict, total=False):
     command : str
-    content: str
-   
+    content: NotRequired[str]   
 MOVE_TOKENS: Dict[Tuple[int, int], ActionToken] = {
     (0, 1): ActionToken.RIGHT,
     (0, -1): ActionToken.LEFT,

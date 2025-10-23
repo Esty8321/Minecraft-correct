@@ -6,11 +6,13 @@ from typing import Tuple
 from fastapi import WebSocket
 import torch
 
-from services.game.bits import get_bit, with_player
-from services.game.db import save_chunk
-from services.game.settings import BIT_HAS_LINK
-from services.game2.core.bits import make_color, set_bit
-from services.game2.core.settings import DTYPE
+
+from services.game2.data.db_chunks import save_chunk
+from services.game2.core.bits import get_bit, make_color, set_bit, with_player
+from services.game2.core.settings import BIT_HAS_LINK, DTYPE
+# 
+from services.game2.hub.scroll import ScrollService
+from services.game2.hub.color import ColorService
 
 from .types import MatrixPayload, MOVE_TOKENS
 from .helper import extract_token, verify_token_or_reason
@@ -18,7 +20,12 @@ from ..data.db_history import ActionToken, append_player_action
 from .sessions import SessionStore, PlayerSession
 from .world import WorldService
 from .movement import MovementService
-from .messaging import MessagingService
+from ..data.db_history import append_player_action
+from .types import MOVE_TOKENS
+# from .messaging import MessagingService
+from services.game2.hub.scroll import ScrollService
+from services.game2.hub.color import ColorService
+
 from .helper import send_json
 
 from .bot import BotService
@@ -30,11 +37,9 @@ class Hub:
         self.sessions = SessionStore()
         self.world = WorldService()
         self.movement = MovementService(self.world)
-        self.messaging = MessagingService(self.world, self.sessions)
-        # global lock only for rare cross-service critical sections
-       
-        self.bots = BotService(self.world, self.movement, self.messaging)
-        
+        self.scroll = ScrollService(self.sessions, self.world)
+        self.color  = ColorService(self.world, self.scroll)
+        self.bots   = BotService(self.world, self.movement, self.scroll)
         self._global_lock = asyncio.Lock()
     
     
@@ -70,7 +75,8 @@ class Hub:
                 chunk_id, spawn = await self.world.get_spawn_position(user_id)
                 state = await self.world.spawn_player(user_id, chunk_id,spawn)
         self.sessions.add(ws, PlayerSession( state=state))
-        await self.messaging.broadcast_chunk(state.chunk_id)
+        await self.scroll.broadcast_chunk(state.chunk_id, self.world.ensure_chunk(state.chunk_id))
+
            
     
     # async def disconnect(self, ws: WebSocket) -> None:
@@ -147,16 +153,37 @@ class Hub:
         state = sess.state
         moved = await self.movement.apply_move(state, dr, dc)
         board = self.world.ensure_chunk(state.chunk_id)
-        await self.messaging.record_player_action(state.user_id, state.chunk_id,dr,dc,board)
-              
+
+        tok = MOVE_TOKENS.get((dr, dc))
+        if tok:
+           try:
+                append_player_action(state.user_id, state.chunk_id, tok, board)
+           except Exception as e:
+                logger.warning("Failed to append player action for move: %s", e)
+
+        
+      
+
         if moved.old_chunk_id and moved.old_chunk_id != state.chunk_id:
-            await self.messaging.update_watchers_after_chunk_change(state.user_id, moved.old_chunk_id, state.chunk_id)
-            await self.messaging.broadcast_chunk(state.chunk_id)
-            return
-        await self.messaging.broadcast_player_move(state.user_id,ws,  state.chunk_id)
+         for s in self.sessions.sockets_for_user(state.user_id):
+            self.sessions.detach_watcher(moved.old_chunk_id, s)
+            self.sessions.attach_watcher(state.chunk_id, s)
+         new_board = self.world.ensure_chunk(state.chunk_id)
+
+         await self.scroll.broadcast_chunk(state.chunk_id, new_board)
+         await self.scroll.maybe_send_message_at(ws, state)   # ← הוספנו כאן
+
+         return
+        await self.scroll.broadcast_chunk(state.chunk_id, board)
+        await self.scroll.maybe_send_message_at(ws, state)
+
   
     async def write_message(self, ws: WebSocket, content: str) -> None:
-      await self.messaging.write_message(ws, content)
+        sess = self.sessions.get(ws)
+        if not sess: 
+          return
+        await self.scroll.write_treasure_message(sess.state, content)
+
  
 
     async def whereami(self, ws: WebSocket) -> None:
@@ -175,33 +202,10 @@ class Hub:
         await send_json(ws, payload)
         
     async def color_plus_plus(self, ws: WebSocket) -> None:
+
         sess = self.sessions.get(ws)
         if not sess:
-            return
-        state = sess.state
-        board = self.world.ensure_chunk(state.chunk_id)
-        r, g, b = (random.randint(0, 3) for _ in range(3))
-        new_base_color_val = int(make_color(r, g, b))
-        old_under_val = int(state.underlying_cell.item()) 
-        if get_bit(old_under_val, BIT_HAS_LINK):
-            new_base_color_val = int(set_bit(new_base_color_val, BIT_HAS_LINK, True))
-        state.underlying_cell = torch.tensor(new_base_color_val, dtype=DTYPE)
-
-        visible_with_player_val = int(with_player(state.color))
-        if get_bit(new_base_color_val, BIT_HAS_LINK):
-            visible_with_player_val = int(set_bit(visible_with_player_val, BIT_HAS_LINK, True))
-
-        board[state.pos.row, state.pos.col] = torch.tensor(visible_with_player_val, dtype=DTYPE)
-        save_chunk(state.chunk_id, board)
-        try:
-                append_player_action(
-                    sess.state.user_id,
-                    state.chunk_id,
-                    ActionToken.COLOR,
-                    board,  
-                )
-        except Exception:
-                pass
-        await self.messaging.broadcast_chunk(state.chunk_id)
+          return
+        await self.color.color_plus_plus_state(sess.state)
         
         
