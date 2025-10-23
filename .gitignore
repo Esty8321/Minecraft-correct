@@ -57,7 +57,7 @@ build/
 # ======================
 data/
 data/**
-data/players.db
+data/players.db 
 data/world.db
 
 # ======================
@@ -68,7 +68,7 @@ Thumbs.db
 desktop.ini
 
 # VSCode
-.vscode/
+.vscode/  
 !.vscode/launch.json
 .vscode/chrome-debug-profile/
 

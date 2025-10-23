@@ -25,11 +25,13 @@ async def _handle_move(ws: WebSocket, key) -> None:
 
 async def _handle_message(ws: WebSocket, data: IncomingMsg) -> None:
     content = (data.get("content") or "").strip()
-    if content: await hub.write_message(ws, content)
-    else:       await _safe_send_json(ws, {"ok": False, "type": "error", "code": "EMPTY_MESSAGE", "msg": "Message content is empty"})
+    if content: 
+        await hub.write_message(ws, content)
+    else:      
+        await _safe_send_json(ws, {"ok": False, "type": "error", "code": "EMPTY_MESSAGE", "msg": "Message content is empty"})
 
 async def _handle_command(ws: WebSocket, data: IncomingMsg) -> None:
-    k = (data.get("k") or "").lower()
+    k = (data.get("command") or "").lower()
     try:
         if k in get_args(Direction):  await _handle_move(ws, k)  # type: ignore[arg-type]
         elif k in ("c", "color", "color++"):      await hub.color_plus_plus(ws)

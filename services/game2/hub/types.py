@@ -39,7 +39,7 @@ class ErrorPayload(TypedDict):
     message: str
 
 class IncomingMsg(TypedDict, total=False):
-    k: str
+    command : str
     content: str
    
 MOVE_TOKENS: Dict[Tuple[int, int], ActionToken] = {

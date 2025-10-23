@@ -85,27 +85,60 @@ class Hub:
     #         self.bots.start(user_id, sess.state)
             
    
+    # async def disconnect(self, ws: WebSocket) -> None:
+    #     print("===in the disconnect function==")
+    #     sess = self.sessions.pop(ws)
+    #     if not sess:
+    #         print("there is not sess==")
+    #         return
+        
+    #     user_id = sess.state.user_id
+    #     chunk_id = sess.state.chunk_id
+
+    #     # Despawn the player visually (optional)
+    #     await self.world.despawn_player(sess.state, user_id=user_id)
+    #     print(f"Player {user_id} disconnected from {chunk_id}")
+
+    #     # --- NEW: Check if the user has no more sockets ---
+    #     remaining = self.sessions.sockets_for_user(user_id)
+    #     print("the remaining is: ", remaining)
+    #     if not remaining:
+    #         # Start the bot to play instead
+    #         print("I am the last here ==")
+    #         if hasattr(self, "bots"):
+    #             print("==Action the bot==")
+    #             await self.bots.start(user_id, sess.state)
+    #         else:
+    #             print("No BotService attached to Hub")
+
     async def disconnect(self, ws: WebSocket) -> None:
-        sess = self.sessions.pop(ws)
-        if not sess:
-            return
+         print("===in the disconnect function==")
+         try:
+             sess = self.sessions.pop(ws)
+             if not sess:
+                 print("there is not sess==")
+                 return
 
-        user_id = sess.state.user_id
-        chunk_id = sess.state.chunk_id
+             user_id = sess.state.user_id
+             chunk_id = sess.state.chunk_id
 
-        # Despawn the player visually (optional)
-        await self.world.despawn_player(sess.state, user_id=user_id)
-        logger.info(f"Player {user_id} disconnected from {chunk_id}")
+             print("before despawn==")
+             await self.world.despawn_player(sess.state)
+             print(f"Player {user_id} disconnected from {chunk_id}")
 
-        # --- NEW: Check if the user has no more sockets ---
-        remaining = self.sessions.sockets_for_user(user_id)
-        if not remaining:
-            # Start the bot to play instead
-            if hasattr(self, "bots"):
-                logger.info(f"Starting bot for {user_id}")
-                await self.bots.start(user_id, sess.state)
-            else:
-                logger.warning("No BotService attached to Hub")
+             remaining = self.sessions.sockets_for_user(user_id)
+             print("the remaining is: ", remaining)
+             if not remaining:
+                 print("I am the last here ==")
+                 if hasattr(self, "bots"):
+                     print("==Action the bot==")
+                     self.bots.start(user_id, sess.state)
+                 else:
+                     print("No BotService attached to Hub")
+         except Exception as e:
+             import traceback
+             print("❌ Error in disconnect:", e)
+             traceback.print_exc()
 
     async def move(self, ws: WebSocket, dr: int, dc: int) -> None:
         sess = self.sessions.get(ws)

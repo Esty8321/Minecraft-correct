@@ -13,7 +13,7 @@ ACTION_BITS = 8
 INPUT_DIM = BOARD_FEAT_DIM + ACTION_BITS + USER_EMB_DIM  # 168
 
 def int_to_8bits(a: int) -> torch.Tensor:
-    # a בגבולות [0..255] – לנו יספיק 1..6
+    #convert an action into 8 binary bits
     bits = [(a >> i) & 1 for i in range(8)]
     return torch.tensor(bits, dtype=torch.float32).unsqueeze(0)  # (1,8)
 
@@ -46,25 +46,6 @@ class GRUPolicy(nn.Module):
         self.cnn = SmallBoardCNN(BOARD_FEAT_DIM)
         self.gru = nn.GRU(INPUT_DIM, HIDDEN_DIM, batch_first=True)
         self.head = nn.Linear(HIDDEN_DIM, NUM_ACTIONS)
-     
-    # def forward_step(
-    #     self,
-    #     board: torch.Tensor,     # (1,1,H,W)
-    #     action_token: int,       # הפעולה האחרונה שבוצעה (או 0 בתחילת רצף)
-    #     user_idx: int,           # אינדקס משתמש
-    #     h: Optional[torch.Tensor] = None,  # (1,1,HIDDEN_DIM)
-    # ) -> Tuple[torch.Tensor, torch.Tensor]:
-    #     # הכנות
-    #     bf = self.cnn(board)                 # (1,128)
-    #     abits = int_to_8bits(int(action_token))  # (1,8)
-    #     uemb = self.user_emb(torch.tensor([user_idx]))  # (1,32)
-
-    #     x = torch.cat([bf, abits, uemb], dim=1)  # (1,168)
-    #     x = x.unsqueeze(1)                       # (1,1,168) — time=1
-
-    #     out, h_new = self.gru(x, h)              # out: (1,1,128); h_new: (1,1,128)
-    #     logits = self.head(out.squeeze(1))       # (1,NUM_ACTIONS)
-    #     return logits, h_new  # מחזיר לוגיטים לפעולה הבאה + hidden החדש
 
     def forward_step(
     self,

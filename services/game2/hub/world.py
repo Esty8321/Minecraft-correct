@@ -72,6 +72,7 @@ class WorldService:
 
 
     async def despawn_player(self, state: PlayerState) -> None:
+        print("in despawn function")
         lock = self._lock_for(state.chunk_id)
         async with lock:
             board = self.ensure_chunk(state.chunk_id)

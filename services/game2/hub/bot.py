@@ -40,6 +40,7 @@ class BotService:
         self.bots: Dict[str, BotCtx] = {}
         self.device = "cpu"
         
+        print("== in init the bot ==")
 
     def load_model(self, weights_path: str = "bot_gru.pt"):
         ckpt = torch.load(weights_path, map_location="cpu")
@@ -50,6 +51,7 @@ class BotService:
 
     def _user_idx(self, user_id: str) -> int:
         # אם משתמש חדש שלא הופיע בטריינינג — למפות ל-0
+    
         return self.user_vocab.get(user_id, 0)
 
     async def _tick(self, user_id: str):
@@ -69,10 +71,28 @@ class BotService:
                 token = IDX_TO_TOKEN[pred_idx]                        # 1..6
 
             # ביצוע פעולה
+            # if token in MOVE_DIR:
+            #     dr, dc = MOVE_DIR[token]
+            #     await self.movement.apply_move(state, dr, dc)
+            #     await self.messaging.broadcast_player_move(user_id, None, state.chunk_id)
+           
             if token in MOVE_DIR:
                 dr, dc = MOVE_DIR[token]
+                old_chunk = state.chunk_id
                 await self.movement.apply_move(state, dr, dc)
+
+                # Notify current chunk
                 await self.messaging.broadcast_player_move(user_id, None, state.chunk_id)
+  
+                # ✅ NEW: if bot moved to a different chunk — broadcast new chunk board
+                if state.chunk_id != old_chunk:
+                    print(f"[BOT] {user_id} moved from {old_chunk} → {state.chunk_id}")
+                    # force the world to ensure/load this chunk
+                    new_board = self.world.ensure_chunk(state.chunk_id)
+                    # broadcast the full chunk board
+                    await self.messaging.broadcast_chunk(state.chunk_id, new_board)
+
+           
             elif token == ActionToken.COLOR:
                 # “צבע++” — נשתמש בשירות קיים
                 # אין לנו ws, לכן נעדכן ישירות דרך MessagingService/WorldService אם יש צורך
