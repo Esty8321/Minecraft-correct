@@ -33,12 +33,14 @@ class WorldService:
         self.player_actions_history = player_actions_history
        
         self.root_chunk_id = chunk_id_from_coords(0, 0)
-        self.ensure_chunk(self.root_chunk_id)#??can i take out it??
+        self.ensure_chunk(self.root_chunk_id)
+  
   
     def _lock_for(self, chunk_id: str) -> asyncio.Lock:
         if chunk_id not in self._chunk_locks:
           self._chunk_locks[chunk_id] = asyncio.Lock()
         return self._chunk_locks[chunk_id] 
+
 
     def ensure_chunk(self, chunk_id: str) -> torch.Tensor:
         if chunk_id in self._chunks:
@@ -59,6 +61,7 @@ class WorldService:
         board = self.ensure_chunk(self.root_chunk_id)
         return self.root_chunk_id, BoardUtils.random_empty_cell(board)
 
+
     async def spawn_player(self, user_id: str, chunk_id: str, spawn: Coord) -> PlayerState:
         color = get_player_color_by_user_id(user_id)
         lock = self._lock_for(chunk_id)
@@ -70,16 +73,6 @@ class WorldService:
             self.chunk_db.save_chunk(chunk_id, board)
         self.player_db.save_position(user_id, chunk_id, spawn.row, spawn.col)
         return PlayerState(user_id=user_id,chunk_id=chunk_id, pos=spawn, visible_cell=visible.clone(), underlying_cell=underlying, color=color)
-
-
-    # async def despawn_player(self, state: PlayerState) -> None:
-    #     lock = self._lock_for(state.chunk_id)
-    #     async with lock:
-    #         board = self.ensure_chunk(state.chunk_id)
-    #         board[state.pos.row, state.pos.col] = state.underlying_cell
-    #         self.chunk_db.save_chunk(state.chunk_id, board)
-    #     if state.user_id:
-    #         self.player_db.save_position(state.user_id, state.chunk_id, state.pos.row, state.pos.col)
          
          
     def find_nearest_player_in_chunk(self, user_id: str)->Optional[str]:

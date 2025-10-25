@@ -1,3 +1,5 @@
+"""Low-level bit manipulation utilities for encoding game board cells (colors, flags, etc.)."""
+
 import hashlib
 import torch
 from typing import Tuple

@@ -78,7 +78,7 @@ __pycache__/
 *.pyc
 *.pyo
 
-
+bot_gru
 # Local data (SQLite etc.)
 data/*.db
 data/*.db-shm

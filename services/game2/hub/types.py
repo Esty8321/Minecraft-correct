@@ -13,7 +13,7 @@ class Coord:
 @dataclass
 class PlayerState:
     """Holds all runtime state for a connected player."""
-    user_id: str#add it so erase the user_id from the sessionstate
+    user_id: str
     chunk_id: str
     pos: Coord
     visible_cell: torch.Tensor
@@ -40,7 +40,7 @@ class ErrorPayload(TypedDict):
 
 class IncomingMsg(TypedDict, total=False):
     command : str
-    content : str = ""
+    content : str 
    
 MOVE_TOKENS: Dict[Tuple[int, int], ActionToken] = {
     (0, 1): ActionToken.RIGHT,

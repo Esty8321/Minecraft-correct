@@ -12,7 +12,6 @@ from ..core.settings import HISTORY_JSON_PATH
 HISTORY_INDEX_PATH: Path = HISTORY_JSON_PATH
 HISTORY_LOG_PATH: Path = HISTORY_JSON_PATH.with_suffix(".jsonl")
 
-##??insert all for class of db_history
 class ActionToken(IntEnum):
     RIGHT = 1
     LEFT = 2
@@ -22,6 +21,7 @@ class ActionToken(IntEnum):
     DM = 6
 
 class PlayerActionHistory:
+    """Records and stores player actions for analysis and model training."""
     def __init__(self, base_path: Path = HISTORY_JSON_PATH):
         self.index_path: Path = base_path
         self.log_path: Path = base_path.with_suffix(".jsonl")
@@ -38,7 +38,7 @@ class PlayerActionHistory:
 
     def _atomic_write(self, payload: dict) -> None:
         """Write Json file atomically"""
-        self.index_path.parent.mkdir(parents= True, exist_ok=True)##??check why every time need I make this dir
+        self.index_path.parent.mkdir(parents= True, exist_ok=True)
         tmp = self.index_path.with_suffix(".tmp")
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
@@ -51,7 +51,7 @@ class PlayerActionHistory:
         raise RuntimeError("Failed to write history Json file atomically.")
 
     @staticmethod
-    def _to_int_list(board_state: Any) -> list[int]:##??can I pass this method to another file??
+    def _to_int_list(board_state: Any) -> list[int]:
         """Normalize various board representations to int list"""
         try:
             if isinstance(board_state, torch.Tensor):

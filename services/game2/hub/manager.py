@@ -1,26 +1,13 @@
-#V
 from __future__ import annotations
 import asyncio
 import logging
-import random
-from typing import Tuple
 from fastapi import WebSocket
-import torch
 
-from services.game.bits import get_bit, with_player
-from services.game.db import save_chunk
-from services.game.settings import BIT_HAS_LINK
-from services.game2.core.bits import make_color, set_bit
-from services.game2.core.settings import DTYPE
-from .types import MatrixPayload, MOVE_TOKENS
-
+from .types import MatrixPayload
 from .auth_utils import AuthUtils
-from ..data.db_history import ActionToken, PlayerActionHistory##??change it be in class, and get the db from the main
 from .sessions import SessionStore, PlayerSession
 from .world import WorldService
 from .movement import MovementService
-from .scrolls import ScrollMessage
-from .ws_utils import WebSocketUtils
 from .scrolls import ScrollService
 from .bot import BotService
 from .color import ColorService
@@ -28,6 +15,9 @@ from ..core.settings import W, H
 
 logger = logging.getLogger(__name__)
 class Hub:
+    """Main orchestration hub connecting all services.
+    Manages player connections, movements, scroll actions, color changes, and bot lifecycle."""
+
     def __init__(self, world: WorldService, movement: MovementService, 
                  scrolls: ScrollService, bots: BotService, sessions: SessionStore, color_service:ColorService) -> None:
         self.world = world
@@ -68,23 +58,21 @@ class Hub:
         if not user_sockets:
             await self.scrolls.broadcast_chunk(state.chunk_id)
 
+
     async def disconnect(self, ws: WebSocket) -> None:
          try:
              sess = self.sessions.pop(ws)
              if not sess:
                  return
 
-             user_id = sess.state.user_id
-             chunk_id = sess.state.chunk_id
-            #  await self.world.despawn_player(sess.state)##??realy don't need this - this save the position of the player, the last position but I already save them at the move command
-            #??but that we don't need keep every time the user do move his last position mabye I can do it only when he do the disconnect
-            ##??why didn't I delete this ws from the session_store?             
+             user_id = sess.state.user_id             
              remaining = self.sessions.sockets_for_user(user_id)
              if not remaining:   
                     self.bots.start(user_id, sess.state)
          except Exception as e:
              import traceback
              traceback.print_exc()
+
 
     async def move(self, ws: WebSocket, dr: int, dc: int) -> None:
         sess = self.sessions.get(ws)
@@ -101,9 +89,8 @@ class Hub:
               
         else:
             await self.scrolls.broadcast_chunk(state.chunk_id)
-        
-        # await self.scrolls.broadcast_player_move(state.user_id,ws,  state.chunk_id)
-  
+    
+      
     async def write_scroll(self, ws: WebSocket, content: str) -> None:
       await self.scrolls.write_scroll(ws, content)
  
@@ -122,6 +109,7 @@ class Hub:
             "total_players": self.sessions.player_count(),
             }
         await WebSocket.send_json(ws, payload)
+       
                
     async def color_plus_plus(self, ws: WebSocket) ->None:
         sess = self.sessions.get(ws)

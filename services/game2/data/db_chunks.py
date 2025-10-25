@@ -5,7 +5,8 @@ import torch
 from ..core.settings import DB_PATH, W, H, DTYPE
 
 class ChunkDB:
-    """Persist chunks (boards) as flat uint8 blobs in SQLite (world.db)."""
+    """Handles persistence of world chunks (boards) in SQLite.
+    Each chunk is stored as a flat uint8 tensor blob."""
 
     def __init__(self, db_path=DB_PATH):
         self.conn = sqlite3.connect(db_path, isolation_level=None)
@@ -69,6 +70,3 @@ class ChunkDB:
     def list_chunk_ids(self) -> List[str]:
         return [r[0] for r in self.conn.execute("SELECT id FROM chunks").fetchall()]
 
-# _db = ChunkDB()##??pass it to the main file
-# def save_chunk(cid: str, data: torch.Tensor) -> None: _db.save_chunk(cid, data)
-# def load_chunk(cid: str) -> Optional[torch.Tensor]:   return _db.load_chunk(cid)

@@ -7,7 +7,8 @@ from ..data import db_chunks
 
 
 class PlayerDB:
-    """Track per-player last known chunk + position in players.db."""
+    """Manages player positions and last-known locations in the world.
+    Stores player state (chunk, row, col) in players.db."""
     def __init__(self, db_path=PLAYERS_DB_PATH):
         self.conn = sqlite3.connect(db_path, isolation_level=None)
         self.conn.execute("PRAGMA journal_mode=WAL")
@@ -52,10 +53,7 @@ class PlayerDB:
     def close(self)->None:
         """Close the database connection."""
         self.conn.close()
-        
-# _db = PlayerDB()
-# def get_player_position(pid: str) -> Optional[Tuple[str, int, int]]: return _db.get_position(pid)
-# def save_player_position(pid: str, cid: str, row: int, col: int) -> None: _db.upsert_position(pid, cid, row, col)
+
 
 
 

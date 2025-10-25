@@ -1,13 +1,11 @@
-#V
-# services/game2/hub/bot.py
+
 from __future__ import annotations
 import asyncio
 import torch
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 from dataclasses import dataclass
 
-from services.game2.models.bot_gru import GRUPolicy, HIDDEN_DIM
-from services.game2.core.settings import W, H, DTYPE
+from services.game2.models.bot_gru import GRUPolicy
 from services.game2.hub.types import PlayerState
 from services.game2.hub.movement import MovementService
 from services.game2.hub.scrolls import  ScrollService
@@ -25,6 +23,7 @@ MOVE_DIR = {
 }
 @dataclass
 class BotCtx:
+    """Holds per-bot runtime context, including hidden state and async task."""
     user_id: str
     state: PlayerState
     task: asyncio.Task
@@ -32,6 +31,7 @@ class BotCtx:
     last_token: int = 0                
 
 class BotService:
+    """Coordinates loading of the GRU model, starts/stops bots, and performs periodic action ticks."""
     def __init__(self, world: WorldService, movement: MovementService, scroll: ScrollService, color_service :ColorService):
         self.world = world
         self.movement = movement
@@ -60,48 +60,37 @@ class BotService:
 
     async def _tick(self, user_id: str):
         ctx = self.bots[user_id]
-        # קצב צעדים — אפשר לכוון
-        TICK = 0.3  # שניות
+        TICK = 0.30
         while user_id in self.bots:
-            state = ctx.state
-            board = self.world.ensure_chunk(state.chunk_id)
-            board_ = board.clone().to(torch.float32).unsqueeze(0).unsqueeze(0)  # (1,1,H,W)
-
-            with torch.no_grad():
-                logits, ctx.h = self.model.forward_step(
-                    board_, ctx.last_token, self._user_idx(user_id), ctx.h
-                )
-                pred_idx = int(torch.argmax(logits, dim=1).item())   # 0..5
-                token = IDX_TO_TOKEN[pred_idx]                        # 1..6
-           
-            if token in MOVE_DIR:
-                dr, dc = MOVE_DIR[token]
-                old_chunk = state.chunk_id
-                await self.movement.apply_move(state, dr, dc)
-
-                # Notify current chunk
-                await self.scroll.broadcast_player_move(user_id, None, state.chunk_id)
-  
-                # ✅ NEW: if bot moved to a different chunk — broadcast new chunk board
-                if state.chunk_id != old_chunk:
-                    print(f"[BOT] {user_id} moved from {old_chunk} → {state.chunk_id}")
-                    # force the world to ensure/load this chunk
-                    new_board = self.world.ensure_chunk(state.chunk_id)
-                    # broadcast the full chunk board
-                    await self.scroll.broadcast_chunk(state.chunk_id, new_board)
-
-           
-            elif token == ActionToken.COLOR:
-                # “צבע++” — נשתמש בשירות קיים
-                # אין לנו ws, לכן נעדכן ישירות דרך MessagingService/WorldService אם יש צורך
-                # אפשר גם להוסיף פונקציה public לעשות color_plus_plus בלי ws (ראו Hub.color_plus_plus)
-                await self.color.color_plus_plus(state)
-                await self.scroll.broadcast_chunk(state.chunk_id)
-            # DM (6) — נתעלם בבוט בסיסי
-
-            ctx.last_token = token
-            await asyncio.sleep(TICK)
-
+            try:
+                state = ctx.state
+                board = self.world.ensure_chunk(state.chunk_id)
+                board_ = board.clone().to(torch.float32).unsqueeze(0).unsqueeze(0)
+    
+                with torch.no_grad():
+                    logits, ctx.h = self.model.forward_step(
+                        board_, ctx.last_token, self._user_idx(user_id), ctx.h
+                    )
+                    pred_idx = int(torch.argmax(logits, dim=1).item())
+                    token = IDX_TO_TOKEN[pred_idx]
+    
+                if token in MOVE_DIR:
+                    dr, dc = MOVE_DIR[token]
+                    await self.movement.apply_move(state, dr, dc)
+                    await self.scroll.broadcast_chunk( state.chunk_id)
+                elif token == ActionToken.COLOR:
+                    await self.color.color_plus_plus(state)
+                elif token == ActionToken.DM:
+                    ##here we need to pass for the model of Shira this user_id with the closet_user_id and get correct message
+                    pass#implement it after
+    
+                ctx.last_token = token
+                await asyncio.sleep(TICK)
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                break
+            
     def start(self, user_id: str, state: PlayerState):
         if (self.model is None) or (not self.user_vocab):
             self.load_model()

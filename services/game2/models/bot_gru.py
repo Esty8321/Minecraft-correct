@@ -1,10 +1,9 @@
-# services/game2/models/bot_gru.py
 from __future__ import annotations
 import torch
 import torch.nn as nn
 from typing import Dict, Optional, Tuple
 
-# מרחב פעולות: 1..6 (ראו ActionToken), נעשה מיפוי ל־[0..5]
+
 NUM_ACTIONS = 6
 HIDDEN_DIM = 128
 USER_EMB_DIM = 32
@@ -13,12 +12,10 @@ ACTION_BITS = 8
 INPUT_DIM = BOARD_FEAT_DIM + ACTION_BITS + USER_EMB_DIM  # 168
 
 def int_to_8bits(a: int) -> torch.Tensor:
-    #convert an action into 8 binary bits
     bits = [(a >> i) & 1 for i in range(8)]
     return torch.tensor(bits, dtype=torch.float32).unsqueeze(0)  # (1,8)
 
 class SmallBoardCNN(nn.Module):
-    """מקבל לוח כטנזור (B,1,H,W) של uint8/float32 ומוציא 128 פיצ'רים לכל דוגמה."""
     def __init__(self, out_dim=BOARD_FEAT_DIM):
         super().__init__()
         self.net = nn.Sequential(

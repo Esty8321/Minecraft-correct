@@ -7,16 +7,18 @@ from .types import PlayerState
 
 @dataclass
 class PlayerSession:
+   """Holds session data for a connected player (state, last message position)."""
    state: PlayerState
    last_msg_pos: Optional[Tuple[str, int, int]] = None
 
 class SessionStore:
-    """Keeps track of live sockets, their sessions, and chunk watchers."""
+    """Central registry of all active sessions, sockets, and player watchers."""
     def __init__(self) -> None:
         self.sockets: Set[WebSocket] = set()
         self.by_ws: Dict[WebSocket, PlayerSession] = {}
         self.watchers_by_chunk: Dict[str, Set[WebSocket]] = {}
         self.by_user: Dict[str, Set[WebSocket]] = {}
+
 
     def add(self, ws: WebSocket, session: PlayerSession) -> None:
         self.sockets.add(ws)
@@ -24,8 +26,10 @@ class SessionStore:
         self.watchers_by_chunk.setdefault(session.state.chunk_id, set()).add(ws)
         self.by_user.setdefault(session.state.user_id, set()).add(ws)
 
+
     def get(self, ws: WebSocket) -> Optional[PlayerSession]:
         return self.by_ws.get(ws)
+
 
     def pop(self, ws: WebSocket) -> Optional[PlayerSession]:
         sess = self.by_ws.pop(ws, None)
@@ -55,11 +59,13 @@ class SessionStore:
     def player_count(self) -> int:
         return len(self.by_user)
     
+    
     def find_by_user_id(self, user_id: str):
          for ws, sess in self.by_ws.items():
              if sess.state.user_id == user_id:
                  return ws, sess
          return None
+
 
     def sockets_for_user(self, user_id: str) -> Set[WebSocket]:##check if I realy need it
         return self.by_user.get(user_id, set())

@@ -34,7 +34,7 @@ scroll_service = ScrollService(world_service, session_store, scrolls_db, chunk_d
 movement_service = MovementService(world_service, chunk_db, player_db)
 color_service = ColorService(world_service, scroll_service)
 
-bot_service = BotService(world_service,scroll_service,scroll_service,color_service)
+bot_service = BotService(world_service,movement_service,scroll_service,color_service)
 
 hub = Hub(world_service, movement_service,
           scroll_service,bot_service,session_store, color_service)
@@ -80,7 +80,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
         await hub.connect(ws)  
         while True:
             raw = await ws.receive_text()
-            try: 
+            try:   
                 data = json.loads(raw)
                 if not isinstance(data, dict):
                     raise ValueError("payload must be an object")
