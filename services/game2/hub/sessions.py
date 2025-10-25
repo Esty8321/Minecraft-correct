@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Set, Tuple
 from fastapi import WebSocket
 
-
 from .types import PlayerState
 
 @dataclass
@@ -13,8 +12,6 @@ class PlayerSession:
 
 class SessionStore:
     """Keeps track of live sockets, their sessions, and chunk watchers."""
-
-
     def __init__(self) -> None:
         self.sockets: Set[WebSocket] = set()
         self.by_ws: Dict[WebSocket, PlayerSession] = {}
@@ -66,3 +63,12 @@ class SessionStore:
 
     def sockets_for_user(self, user_id: str) -> Set[WebSocket]:##check if I realy need it
         return self.by_user.get(user_id, set())
+
+
+    def update_watchers_after_chunk_change(self, user_id: str, old_chunk_id: str, new_chunk_id: str):
+        """Detach player's sockets from old chunk and attach to the new one."""
+        if not old_chunk_id or old_chunk_id == new_chunk_id:
+            return
+        for ws in self.sockets_for_user(user_id):
+            self.detach_watcher(old_chunk_id, ws)
+            self.attach_watcher(new_chunk_id, ws)

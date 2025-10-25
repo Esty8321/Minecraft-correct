@@ -102,7 +102,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
         dbg("WS open");
         setConnected(true);
         try {
-          ws.send(JSON.stringify({ k: "whereami" }));
+          ws.send(JSON.stringify({ command: "whereami" }));
         } catch (e) {
           dbg("WS send whereami failed:", e);
         }
@@ -210,22 +210,22 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
       switch (key) {
         case "arrowup":
         case "w":
-          sendMessage({ k: "up" });
+          sendMessage({ command: "up" });
           action = "Moved Up";
           break;
         case "arrowdown":
         case "s":
-          sendMessage({ k: "down" });
+          sendMessage({ command: "down" });
           action = "Moved Down";
           break;
         case "arrowleft":
         case "a":
-          sendMessage({ k: "left" });
+          sendMessage({ command: "left" });
           action = "Moved Left";
           break;
         case "arrowright":
         case "d":
-          sendMessage({ k: "right" });
+          sendMessage({ command: "right" });
           action = "Moved Right";
           break;
         case "m":
@@ -233,7 +233,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
           action = "Writing Message";
           break;
         case "c":
-          sendMessage({ k: "c" });
+          sendMessage({ command: "c" });
           action = "Color Changed";
           break;
       }
@@ -415,7 +415,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
       {showMessageInput && (
         <MessageInput
           onSubmit={(content: string) => {
-            sendMessage({ k: "m", content });
+            sendMessage({ command: "m", content });
             setShowMessageInput(false);
           }}
           onClose={() => setShowMessageInput(false)}

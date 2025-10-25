@@ -1,8 +1,9 @@
 import hashlib
 import torch
+from typing import Tuple
 from .settings import (
     DTYPE, COLOR_BITS,
-    BIT_IS_PLAYER, BIT_R0, BIT_R1, BIT_G0, BIT_G1, BIT_B0, BIT_B1
+    BIT_IS_PLAYER, BIT_R0, BIT_R1, BIT_G0, BIT_G1, BIT_B0, BIT_B1, BIT_HAS_LINK
 )  
 
 def set_bit(v: torch.Tensor, bit: int, one: bool) -> torch.Tensor:
@@ -42,3 +43,13 @@ def get_player_color_by_user_id(user_id: str | int) -> torch.Tensor:
     """Stable color per user-id using sha256 digest."""
     digest = hashlib.sha256(str(user_id).encode("utf-8")).digest()
     return make_color(digest[0] & 3, digest[1] & 3, digest[2] & 3)
+
+def compose_entry_cells(board: torch.Tensor, r: int, c: int, color: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    dest_val: int = int(board[r, c].item())
+    new_under_val: int = int(without_player(dest_val))
+    new_vis_val: int = int(with_player(color))
+    if get_bit(dest_val, BIT_HAS_LINK):
+        new_vis_val = int(set_bit(new_vis_val, BIT_HAS_LINK, True))
+    new_under = torch.tensor(new_under_val, dtype=DTYPE)
+    new_vis   = torch.tensor(new_vis_val,   dtype=DTYPE)
+    return new_under, new_vis

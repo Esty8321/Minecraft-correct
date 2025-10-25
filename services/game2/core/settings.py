@@ -1,3 +1,4 @@
+#V
 from pathlib import Path
 import torch
 
@@ -19,8 +20,7 @@ COLOR_BITS = {
 
 # Data paths
 DATA_DIR = Path("data")
-DATA_DIR.mkdir(parents=True, exist_ok=True)
 DB_PATH = DATA_DIR / "world.db"
 PLAYERS_DB_PATH = DATA_DIR / "players.db"
-MESSAGES_JSON_PATH = DATA_DIR / "message.json"
+SCROLLS_JSON_PATH = DATA_DIR / "message.json"##to change this name to scrolls
 HISTORY_JSON_PATH  = DATA_DIR / "history.json"

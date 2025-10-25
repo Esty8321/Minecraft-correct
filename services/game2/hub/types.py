@@ -1,5 +1,5 @@
 import torch
-from typing import Dict, Optional, Set, Tuple, Literal, TypedDict
+from typing import Dict,Tuple, Literal, TypedDict
 from dataclasses import dataclass
 from ..data.db_history import  ActionToken
 
@@ -40,7 +40,7 @@ class ErrorPayload(TypedDict):
 
 class IncomingMsg(TypedDict, total=False):
     command : str
-    content: str
+    content : str = ""
    
 MOVE_TOKENS: Dict[Tuple[int, int], ActionToken] = {
     (0, 1): ActionToken.RIGHT,

@@ -1,7 +1,7 @@
 from .manager import Hub
 from .world import WorldService
 from .movement import MovementService
-from .messaging import MessagingService
+from .scrolls import MessagingService
 from .sessions import SessionStore
 
 
