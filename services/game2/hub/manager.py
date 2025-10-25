@@ -81,16 +81,17 @@ class Hub:
         state = sess.state
         moved = await self.movement.apply_move(state, dr, dc)
         board = self.world.ensure_chunk(state.chunk_id)
-        await self.world.player_actions_history.record_player_action(state.user_id, state.chunk_id,dr,dc,board)##??how can I fix it??
+        await self.world.player_actions_history.record_player_action(state.user_id, state.chunk_id,dr,dc,board)
               
         if moved.old_chunk_id and moved.old_chunk_id != state.chunk_id:
             self.sessions.update_watchers_after_chunk_change(state.user_id, moved.old_chunk_id, state.chunk_id)
             await self.scrolls.broadcast_chunk(state.chunk_id)
+            await self.scrolls.broadcast_chunk(moved.old_chunk_id)
               
         else:
             await self.scrolls.broadcast_chunk(state.chunk_id)
-    
-      
+        await self.scrolls.maybe_send_scroll_at(ws)
+        
     async def write_scroll(self, ws: WebSocket, content: str) -> None:
       await self.scrolls.write_scroll(ws, content)
  

@@ -78,3 +78,5 @@ class SessionStore:
         for ws in self.sockets_for_user(user_id):
             self.detach_watcher(old_chunk_id, ws)
             self.attach_watcher(new_chunk_id, ws)
+            
+        
