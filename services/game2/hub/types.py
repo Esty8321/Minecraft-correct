@@ -1,9 +1,17 @@
 import torch
 from typing import Dict,Tuple, Literal, TypedDict
 from dataclasses import dataclass
-from ..data.db_history import  ActionToken
+# from ..data.db_history import  ActionToken
+from enum import IntEnum
 
-
+class ActionToken(IntEnum):
+    RIGHT = 1
+    LEFT = 2
+    UP = 3
+    DOWN = 4
+    COLOR = 5
+    DM = 6
+    
 @dataclass(frozen=True)
 class Coord:
     """A coordinate (row, col) on a board."""

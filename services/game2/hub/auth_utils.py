@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 JWT_SECRET = os.getenv("AUTH_JWT_SECRET", "CHANGE_ME_123456789")
 JWT_ALG = os.getenv("JWT_ALG", "HS256")
 
-class AuthUtils:
+class AuthUtils:   
     """JWT authentication utilities for verifying and extracting user tokens from WebSocket connections."""
     @staticmethod
     def extract_token(ws: WebSocket) -> Optional[str]:

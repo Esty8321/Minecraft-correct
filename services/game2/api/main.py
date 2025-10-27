@@ -19,9 +19,11 @@ from ..hub.ws_utils import WebSocketUtils
 
 from ..core.settings import DATA_DIR
 DATA_DIR.mkdir(parents=True, exist_ok=True)
+# from .players import router as players_router
 
 logger = logging.getLogger(__name__)
-app = FastAPI(title="Voxel Server")
+app = FastAPI(title="NanoVerse")
+# app.include_router(players_router, prefix="/game")
 
 player_db = PlayerDB()
 chunk_db = ChunkDB()
@@ -76,40 +78,30 @@ async def _handle_command(ws: WebSocket, data: IncomingMsg) -> None:
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket) -> None:
     await ws.accept()
+    await hub.connect(ws)  
     try:
-        await hub.connect(ws)  
         while True:
-            raw = await ws.receive_text()
-            try:   
-                data = json.loads(raw)
-                if not isinstance(data, dict):
-                    raise ValueError("payload must be an object")
-            except Exception as e:
-               await WebSocketUtils.send_json(ws, {
-                    "ok": False,
-                    "type": "error",
-                    "code": "BAD_PAYLOAD",
-                    "msg": str(e),
-                })
-               continue
-            await _handle_command(ws, data)   
-                        
-    except Exception as e:
-        logger.exception("WS connection failed: %s", e)
-        try:
-            await ws.close(code=1011, reason="internal error")
-        except Exception:
-                logger.warning("Failed to close WebSocket cleanly: %s", e)
+                raw = await ws.receive_text()
+                try:   
+                    data = json.loads(raw)
+                    if not isinstance(data, dict):
+                        raise ValueError("payload must be an object")
+                except Exception as e:
+                   await WebSocketUtils.send_json(ws, {
+                        "ok": False,
+                        "type": "error",
+                        "code": "BAD_PAYLOAD",
+                        "msg": str(e),
+                    })
+                   continue
+                await _handle_command(ws, data)   
+   
     finally:
-        try:
-            await hub.disconnect(ws)
-        except Exception as e:
-            logger.warning("Failed to disconnect WS cleanly: %s", e)
+        await hub.disconnect(ws)  
          
-             
-@app.get("/nearest-player/{player_id}")
-async def nearest_player(player_id: str):
-    pid = world_service.find_nearest_player_in_chunk(player_id)
-    if not pid:
-        return {"ok": False, "nearest" : None}
-    return {"ok":True, "nearest": pid}
+# @app.get("/nearest-player/{player_id}")
+# async def nearest_player(player_id: str):
+#     pid = world_service.find_nearest_player_in_chunk(player_id)
+#     if not pid:
+#         return {"ok": False, "nearest" : None}
+#     return {"ok":True, "nearest": pid}

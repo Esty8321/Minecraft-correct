@@ -38,10 +38,14 @@ class MovementService:
     
     
     async def _move_within_chunk(self, state: PlayerState, board: torch.Tensor, nr: int, nc: int) -> None:
+        """Move player inside the same chunk - im memory only."""
         board[state.pos.row, state.pos.col] = state.underlying_cell
         new_under, new_vis = compose_entry_cells(board, nr, nc, state.color)
         board[nr, nc] = new_vis
-        self.chunk_db.save_chunk(state.chunk_id, board)
+        
+        # self.chunk_db.save_chunk(state.chunk_id, board)
+        self.world._mark_dirty(state.chunk_id)
+        
         state.pos = Coord(nr, nc)
         state.underlying_cell = new_under
         state.visible_cell = new_vis
@@ -49,6 +53,7 @@ class MovementService:
     
     
     async def _transfer_between_chunks(self, state: PlayerState, direction: Direction) -> Tuple[bool, str]:
+        """Move player between chunks - keep both chunks in memory."""
         old_chunk_id = state.chunk_id
         old_board = self.world.ensure_chunk(old_chunk_id)
         new_chunk_id = WorldService.neighbor_chunk_id(old_chunk_id, direction)
@@ -60,13 +65,15 @@ class MovementService:
 
         async with self.world._lock_for(old_chunk_id):
             old_board[state.pos.row, state.pos.col] = state.underlying_cell
-            self.chunk_db.save_chunk(old_chunk_id, old_board)
-
+            # self.chunk_db.save_chunk(old_chunk_id, old_board)
+            self.world._mark_dirty(old_chunk_id)
+   
 
         async with self.world._lock_for(new_chunk_id):
             new_under, new_vis = compose_entry_cells(new_board, target.row, target.col, state.color)
             new_board[target.row, target.col] = new_vis
-            self.chunk_db.save_chunk(new_chunk_id, new_board)
+            # self.chunk_db.save_chunk(new_chunk_id, new_board)
+            self.world._mark_dirty(new_chunk_id)
 
         state.chunk_id = new_chunk_id
         state.pos = target
