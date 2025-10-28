@@ -5,8 +5,9 @@ import torch
 from typing import Tuple
 from .settings import (
     DTYPE, COLOR_BITS,
-    BIT_IS_PLAYER, BIT_R0, BIT_R1, BIT_G0, BIT_G1, BIT_B0, BIT_B1, BIT_HAS_LINK
-)  
+    BIT_IS_PLAYER_IDX, BIT_R0_IDX, BIT_R1_IDX, BIT_G0_IDX, BIT_G1_IDX, BIT_B0_IDX, BIT_B1_IDX, BIT_HAS_LINK_IDX
+)
+
 
 def set_bit(v: torch.Tensor, bit: int, one: bool) -> torch.Tensor:
     """Set/Clear single bit on an 8-bit tensor value."""
@@ -30,16 +31,16 @@ def set2(v: torch.Tensor, b0: int, b1: int, x: int) -> torch.Tensor:
 def make_color(r2: int, g2: int, b2: int) -> torch.Tensor:
     """Compose color (2 bits per channel) into a single 8-bit value without player flag."""
     v = torch.tensor(0, dtype=DTYPE)
-    v = set2(v, BIT_R0, BIT_R1, r2)
-    v = set2(v, BIT_G0, BIT_G1, g2)
-    v = set2(v, BIT_B0, BIT_B1, b2)
+    v = set2(v, BIT_R0_IDX, BIT_R1_IDX, r2)
+    v = set2(v, BIT_G0_IDX, BIT_G1_IDX, g2)
+    v = set2(v, BIT_B0_IDX, BIT_B1_IDX , b2)
     return v
 
 def with_player(v: torch.Tensor) -> torch.Tensor:
-    return set_bit(v, BIT_IS_PLAYER, True)
+    return set_bit(v, BIT_IS_PLAYER_IDX, True)
 
 def without_player(v: torch.Tensor) -> torch.Tensor:
-    return set_bit(v, BIT_IS_PLAYER, False)
+    return set_bit(v, BIT_IS_PLAYER_IDX, False)
 
 def get_player_color_by_user_id(user_id: str | int) -> torch.Tensor:
     """Stable color per user-id using sha256 digest."""
@@ -50,8 +51,8 @@ def compose_entry_cells(board: torch.Tensor, r: int, c: int, color: torch.Tensor
     dest_val: int = int(board[r, c].item())
     new_under_val: int = int(without_player(dest_val))
     new_vis_val: int = int(with_player(color))
-    if get_bit(dest_val, BIT_HAS_LINK):
-        new_vis_val = int(set_bit(new_vis_val, BIT_HAS_LINK, True))
+    if get_bit(dest_val, BIT_HAS_LINK_IDX):
+        new_vis_val = int(set_bit(new_vis_val, BIT_HAS_LINK_IDX, True))
     new_under = torch.tensor(new_under_val, dtype=DTYPE)
     new_vis   = torch.tensor(new_vis_val,   dtype=DTYPE)
     return new_under, new_vis

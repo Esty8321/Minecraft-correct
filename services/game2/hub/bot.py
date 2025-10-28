@@ -11,6 +11,7 @@ from services.game2.hub.movement import MovementService
 from services.game2.hub.scrolls import  ScrollService
 from services.game2.hub.world import WorldService
 from services.game2.data.db_history import ActionToken
+
 from .color import ColorService
 
 IDX_TO_TOKEN = {i: i+1 for i in range(6)}

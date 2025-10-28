@@ -1,7 +1,7 @@
 from __future__ import annotations
 import random
 import torch
-from ..core.settings import W, H, BIT_IS_PLAYER
+from ..core.settings import W, H, BIT_IS_PLAYER_IDX
 from ..core.bits import get_bit
 from .types import Coord, PlayerState, Direction
 
@@ -10,7 +10,7 @@ class BoardUtils:
 
     @staticmethod
     def is_empty(board: torch.Tensor, r: int, c: int) -> bool:
-        return int(get_bit(board[r, c], BIT_IS_PLAYER)) == 0
+        return int(get_bit(board[r, c], BIT_IS_PLAYER_IDX)) == 0
 
     @staticmethod
     def in_bounds(r: int, c: int) -> bool:

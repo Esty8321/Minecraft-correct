@@ -7,7 +7,7 @@ from .types import MatrixPayload
 from .ws_utils import  WebSocketUtils
 from .sessions import SessionStore
 from .world import WorldService
-from ..core.settings import W, H, BIT_HAS_LINK
+from ..core.settings import W, H, BIT_HAS_LINK_IDX
 from ..core.bits import get_bit, set_bit
 from ..data.db_scrolls import  ScrollDB
 
@@ -57,7 +57,7 @@ class ScrollService:
         cell_under = state.underlying_cell or board[state.pos.row, state.pos.col]
         current_pos = (state.chunk_id, state.pos.row, state.pos.col)
 
-        if get_bit(cell_under, BIT_HAS_LINK):
+        if get_bit(cell_under, BIT_HAS_LINK_IDX):
             if sess.last_msg_pos == current_pos:
                 return
         msg = self.scroll_db.load_scroll(state.chunk_id, state.pos.row, state.pos.col)
@@ -88,8 +88,8 @@ class ScrollService:
             position=(state.pos.row, state.pos.col),
             )
         self.scroll_db.save_scroll(scroll)
-        board[state.pos.row, state.pos.col] = set_bit(board[state.pos.row, state.pos.col], BIT_HAS_LINK, True)
-        state.underlying_cell = set_bit(state.underlying_cell, BIT_HAS_LINK, True)
+        board[state.pos.row, state.pos.col] = set_bit(board[state.pos.row, state.pos.col], BIT_HAS_LINK_IDX, True)
+        state.underlying_cell = set_bit(state.underlying_cell, BIT_HAS_LINK_IDX, True)
         self.chunk_db.save_chunk(state.chunk_id, board)
         await self.broadcast_chunk(state.chunk_id)
         notice = {"type": "announcement", "data": {"text": "A player hid a treasure"}}
