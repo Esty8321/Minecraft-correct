@@ -7,7 +7,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
+db_chunks
 # VSCode debug cache
 .vscode/chrome-debug-profile/
 .vscode/chrome-debug-profile/**

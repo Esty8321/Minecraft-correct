@@ -70,7 +70,7 @@ class SessionStore:
     def sockets_for_user(self, user_id: str) -> Set[WebSocket]:##check if I realy need it
         return self.by_user.get(user_id, set())
 
-
+   
     def update_watchers_after_chunk_change(self, user_id: str, old_chunk_id: str, new_chunk_id: str):
         """Detach player's sockets from old chunk and attach to the new one."""
         if not old_chunk_id or old_chunk_id == new_chunk_id:

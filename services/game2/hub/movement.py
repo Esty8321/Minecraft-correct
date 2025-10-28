@@ -9,6 +9,7 @@ from .world import WorldService
 from ..data.db_chunks import ChunkDB
 from  ..data.db_players import PlayerDB
 from ..core.bits import compose_entry_cells
+from .chunk_players import ChunkPlayers
 @dataclass
 class MoveResult:
    moved: bool
@@ -17,11 +18,12 @@ class MoveResult:
 class MovementService:
     """Handles player movement logic both within and between chunks.
      the board state and player database accordingly."""
-    def __init__(self, world: WorldService, chunk_db: ChunkDB, player_db: PlayerDB) -> None:
+    def __init__(self, world: WorldService, chunk_db: ChunkDB, player_db: PlayerDB, chunk_players: ChunkPlayers) -> None:
         self.world = world
         
         self.chunk_db = chunk_db
         self.player_db = player_db
+        self.chunk_players = chunk_players
  
     async def apply_move(self, state: PlayerState, dr: int, dc: int) -> MoveResult:
         nr, nc = state.pos.row + dr, state.pos.col + dc
@@ -29,29 +31,26 @@ class MovementService:
             board = self.world.ensure_chunk(state.chunk_id)
             if not BoardUtils.is_empty(board, nr, nc):
                 return MoveResult(False)
-            await self._move_within_chunk(state, board, nr, nc)
+            await self.move_within_chunk(state, board, nr, nc)
             return MoveResult(True, None)
 
         direction = BoardUtils.edge_direction(nr, nc)
         moved, old_chunk_id = await self._transfer_between_chunks(state, direction)
         return MoveResult(moved, old_chunk_id if moved else None)
     
-    
-    async def _move_within_chunk(self, state: PlayerState, board: torch.Tensor, nr: int, nc: int) -> None:
-        """Move player inside the same chunk - im memory only."""
+    async def move_within_chunk(self, state: PlayerState, board: torch.Tensor, nr: int, nc: int) -> None:
+        # state.pos = Coord(nr, nc)
+        # self.player_db.save_position(state.user_id, state.chunk_id, state.pos.row, state.pos.col)
         board[state.pos.row, state.pos.col] = state.underlying_cell
-        new_under, new_vis = compose_entry_cells(board, nr, nc, state.color)
-        board[nr, nc] = new_vis
+        new_underlying = board[nr, nc].clone()
         
-        # self.chunk_db.save_chunk(state.chunk_id, board)
-        self.world._mark_dirty(state.chunk_id)
+        color = state.color
+        board[nr, nc] = color
+        state.pos = Coord(nr, nc)   
+        self.player_db.save_position(state.user_id, state.chunk_id, nr, nc)
+        self.chunk_players.update_position(state.chunk_id, state.user_id, nr, nc)
+        state.underlying_cell = new_underlying
         
-        state.pos = Coord(nr, nc)
-        state.underlying_cell = new_under
-        state.visible_cell = new_vis
-        self.player_db.save_position(state.user_id ,state.chunk_id,state.pos.row,state.pos.col)
-    
-    
     async def _transfer_between_chunks(self, state: PlayerState, direction: Direction) -> Tuple[bool, str]:
         """Move player between chunks - keep both chunks in memory."""
         old_chunk_id = state.chunk_id
@@ -65,20 +64,20 @@ class MovementService:
 
         async with self.world._lock_for(old_chunk_id):
             old_board[state.pos.row, state.pos.col] = state.underlying_cell
-            # self.chunk_db.save_chunk(old_chunk_id, old_board)
             self.world._mark_dirty(old_chunk_id)
    
-
         async with self.world._lock_for(new_chunk_id):
             new_under, new_vis = compose_entry_cells(new_board, target.row, target.col, state.color)
             new_board[target.row, target.col] = new_vis
-            # self.chunk_db.save_chunk(new_chunk_id, new_board)
             self.world._mark_dirty(new_chunk_id)
 
         state.chunk_id = new_chunk_id
         state.pos = target
         state.underlying_cell = new_under
         state.visible_cell = new_vis
+        
+        ##??chekc how can I do it only one time instead two
         self.player_db.save_position(state.user_id,state.chunk_id,state.pos.row,state.pos.col)
+        self.chunk_players.move_player(old_chunk_id, new_chunk_id, state.user_id, target.row, target.col)
         return True, old_chunk_id
         

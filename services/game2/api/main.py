@@ -2,6 +2,7 @@ import json
 import logging
 from typing import Any, get_args
 from fastapi import FastAPI, WebSocket
+from starlette.websockets    import WebSocketDisconnect
 
 from ..data.db_players import PlayerDB
 from ..data.db_chunks import ChunkDB
@@ -16,30 +17,30 @@ from ..hub.movement import MovementService
 from ..hub.bot import BotService
 from ..hub.color import ColorService
 from ..hub.ws_utils import WebSocketUtils
-
+from ..hub.chunk_players import ChunkPlayers
 from ..core.settings import DATA_DIR
 DATA_DIR.mkdir(parents=True, exist_ok=True)
-# from .players import router as players_router
 
 logger = logging.getLogger(__name__)
 app = FastAPI(title="NanoVerse")
-# app.include_router(players_router, prefix="/game")
 
 player_db = PlayerDB()
 chunk_db = ChunkDB()
 player_actions_history = PlayerActionHistory()
 scrolls_db = ScrollDB()
+chunk_players = ChunkPlayers()
 
-world_service = WorldService(chunk_db, player_db, player_actions_history)
+
+world_service = WorldService(chunk_db, player_db, player_actions_history, chunk_players)
 session_store = SessionStore()
-scroll_service = ScrollService(world_service, session_store, scrolls_db, chunk_db, player_actions_history)
-movement_service = MovementService(world_service, chunk_db, player_db)
-color_service = ColorService(world_service, scroll_service)
+scroll_service = ScrollService(world_service, session_store, scrolls_db, chunk_db, player_actions_history, player_db)
 
+movement_service = MovementService(world_service, chunk_db, player_db, chunk_players)
+color_service = ColorService(world_service, scroll_service)
 bot_service = BotService(world_service,movement_service,scroll_service,color_service)
 
 hub = Hub(world_service, movement_service,
-          scroll_service,bot_service,session_store, color_service)
+          scroll_service,bot_service,session_store, color_service, player_db, chunk_players)
 
 
 async def _handle_move(ws: WebSocket, key) -> None:
@@ -47,7 +48,7 @@ async def _handle_move(ws: WebSocket, key) -> None:
     if key == "down":  await hub.move(ws, +1, 0)
     if key == "left":  await hub.move(ws, 0, -1)
     if key == "right": await hub.move(ws, 0, +1)
-
+   
 
 async def _handle_scroll(ws: WebSocket, data: IncomingMsg) -> None:
     content = (data.get("content") or "").strip()
@@ -84,6 +85,13 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 raw = await ws.receive_text()
                 try:   
                     data = json.loads(raw)
+                    typ = (data.get("type") or "").lower()##??to see how to call it
+                    
+                    if typ:
+                        ##send to chat manager the type
+                        pass
+                        chat_endpoint(ws, typ, data)
+                    
                     if not isinstance(data, dict):
                         raise ValueError("payload must be an object")
                 except Exception as e:
@@ -94,14 +102,12 @@ async def ws_endpoint(ws: WebSocket) -> None:
                         "msg": str(e),
                     })
                    continue
-                await _handle_command(ws, data)   
-   
+                if not typ:
+                    await _handle_command(ws, data)   
+    except WebSocketDisconnect:
+        await hub.disconnect(ws)
+        print("[INFO] WebSocket disconnected cleanly")
     finally:
         await hub.disconnect(ws)  
          
-# @app.get("/nearest-player/{player_id}")
-# async def nearest_player(player_id: str):
-#     pid = world_service.find_nearest_player_in_chunk(player_id)
-#     if not pid:
-#         return {"ok": False, "nearest" : None}
-#     return {"ok":True, "nearest": pid}
+

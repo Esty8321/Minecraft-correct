@@ -45,6 +45,8 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [players, setPlayers] = useState<Array<{ id: string; row: number; col: number }>>([]);
+
   const dbg = (...args: any[]) => console.log("[VoxelGrid]", ...args);
 
   const getWebSocketUrl = useCallback((): string => {
@@ -124,6 +126,11 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
               chunk_id: data.chunk_id,
             });
 
+            const newPlayers = Array.isArray(data.players) ? data.players: [];
+            setPlayers(newPlayers)
+            console.log("players in current chunk:", newPlayers);
+            
+            
             const newChunkId = String(data.chunk_id || "");
             if (newChunkId && newChunkId !== sessionStorage.getItem("current_chunk_id")) {
               sessionStorage.setItem("current_chunk_id", newChunkId);
@@ -236,7 +243,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
           sendMessage({ command: "c" });
           action = "Color Changed";
           break;
-      }
+      }//??add action of open the chat v
       if (action) {
         setLastAction(action);
         window.setTimeout(() => setLastAction(""), 2000);
@@ -268,6 +275,9 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
 
   const renderGrid = () => {
     if (!gameState) return null;
+    
+    const playerSet = new Set(players.map(p => `${p.row},${p.col}`));
+
     const cells: JSX.Element[] = [];
     for (let r = 0; r < gameState.h; r++) {
       for (let c = 0; c < gameState.w; c++) {
@@ -279,19 +289,20 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
         const get2 = (x: number, b0: number, b1: number) =>
           (getBit(x, b1) << 1) | getBit(x, b0);
         const r2 = get2(v, 2, 5);
-        const g2 = get2(v, 3, 6);
+        const g2 = get2(v, 3, 6);   
         const b2 = get2(v, 4, 7);
         const blank = !isPlayer && r2 === 0 && g2 === 0 && b2 === 0;
         const map = [0, 85, 170, 255];
         const color = `rgb(${map[r2]}, ${map[g2]}, ${map[b2]})`;
 
+        const isPlayersHere = playerSet.has(`${r},${c}`)
         cells.push(
           <div
             key={`${r}-${c}`}
             className={`voxel-cell ${isPlayer ? "voxel-player" : "voxel-empty"}`}
             style={{
               backgroundColor: blank ? "transparent" : color,
-              outline: isPlayer ? "1px solid rgba(255,255,255,0.6)" : "none",
+              outline: isPlayersHere ? "1px solid rgba(255,255,255,0.6)" : "none",
             }}
           />
         );
@@ -302,7 +313,6 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-x-hidden">
-      {/* --- HEADER (מוחזר מהעיצוב הישן) --- */}
       <div className="container mx-auto px-4 pt-8">
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
@@ -327,7 +337,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
           <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-300">
             <Users size={18} />
             <span className="font-medium">{playerCount} Players</span>
-          </div>
+          </div>   
 
           {lastAction && (
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 text-purple-300 animate-pulse">
@@ -339,7 +349,6 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
       </div>
 
       <div className="flex flex-row-reverse min-h-[60vh]">
-        {/* GRID AREA */}
         <div
           className={`transition-all duration-500 ${showChat ? "w-3/4" : "w-full"
             } flex justify-center items-center px-4`}

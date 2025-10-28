@@ -17,7 +17,7 @@ class AuthUtils:
             return token
         auth = ws.headers.get("authorization") or ws.headers.get("Authorization")
         if isinstance(auth, str) and auth.lower().startswith("bearer "):
-            return auth[7:]
+            return auth[7:] #skip "Bearer " prefix (7 chars)
         return None  
 
     @staticmethod

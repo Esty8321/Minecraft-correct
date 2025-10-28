@@ -5,8 +5,8 @@ import torch
 from typing import Tuple
 from .settings import (
     DTYPE, COLOR_BITS,
-    BIT_IS_PLAYER, BIT_R0, BIT_R1, BIT_G0, BIT_G1, BIT_B0, BIT_B1, BIT_HAS_LINK
-)  
+    BIT_R0, BIT_R1, BIT_G0, BIT_G1, BIT_B0, BIT_B1, BIT_HAS_LINK
+)
 
 def set_bit(v: torch.Tensor, bit: int, one: bool) -> torch.Tensor:
     """Set/Clear single bit on an 8-bit tensor value."""
@@ -19,27 +19,23 @@ def get_bit(v: torch.Tensor, bit: int) -> torch.Tensor:
 def get2(v: torch.Tensor, b0: int, b1: int) -> torch.Tensor:
     return ((v >> b1) & 1) * 2 + ((v >> b0) & 1)
 
-
 def set2(v: torch.Tensor, b0: int, b1: int, x: int) -> torch.Tensor:
+    """Set 2-bit value (0–3) into given bits."""
     x &= 3
     v = v & (~(torch.tensor((1 << b0) | (1 << b1), dtype=DTYPE)) & torch.tensor(0xFF, dtype=DTYPE))
-    if x & 1: v = v | torch.tensor(1 << b0, dtype=DTYPE)
-    if x & 2: v = v | torch.tensor(1 << b1, dtype=DTYPE)
+    if x & 1:
+        v = v | torch.tensor(1 << b0, dtype=DTYPE)
+    if x & 2:
+        v = v | torch.tensor(1 << b1, dtype=DTYPE)
     return v
 
 def make_color(r2: int, g2: int, b2: int) -> torch.Tensor:
-    """Compose color (2 bits per channel) into a single 8-bit value without player flag."""
+    """Compose color (2 bits per channel) into a single 8-bit value."""
     v = torch.tensor(0, dtype=DTYPE)
     v = set2(v, BIT_R0, BIT_R1, r2)
     v = set2(v, BIT_G0, BIT_G1, g2)
     v = set2(v, BIT_B0, BIT_B1, b2)
     return v
-
-def with_player(v: torch.Tensor) -> torch.Tensor:
-    return set_bit(v, BIT_IS_PLAYER, True)
-
-def without_player(v: torch.Tensor) -> torch.Tensor:
-    return set_bit(v, BIT_IS_PLAYER, False)
 
 def get_player_color_by_user_id(user_id: str | int) -> torch.Tensor:
     """Stable color per user-id using sha256 digest."""
@@ -47,11 +43,18 @@ def get_player_color_by_user_id(user_id: str | int) -> torch.Tensor:
     return make_color(digest[0] & 3, digest[1] & 3, digest[2] & 3)
 
 def compose_entry_cells(board: torch.Tensor, r: int, c: int, color: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-    dest_val: int = int(board[r, c].item())
-    new_under_val: int = int(without_player(dest_val))
-    new_vis_val: int = int(with_player(color))
-    if get_bit(dest_val, BIT_HAS_LINK):
-        new_vis_val = int(set_bit(new_vis_val, BIT_HAS_LINK, True))
+    """
+    Used when a player enters a new cell.
+    Returns (underlying_cell, visible_cell) without player bit.
+    """
+    dest_val = int(board[r, c].item())
+    new_under_val = dest_val  # same, since no player bit anymore
+    new_vis_val = int(color)
+
+    # Preserve BIT_HAS_LINK if it existed in the cell
+    if get_bit(torch.tensor(dest_val), BIT_HAS_LINK):
+        new_vis_val = int(set_bit(torch.tensor(new_vis_val, dtype=DTYPE), BIT_HAS_LINK, True))
+
     new_under = torch.tensor(new_under_val, dtype=DTYPE)
-    new_vis   = torch.tensor(new_vis_val,   dtype=DTYPE)
+    new_vis = torch.tensor(new_vis_val, dtype=DTYPE)
     return new_under, new_vis

@@ -1,9 +1,14 @@
 import torch
-from typing import Dict,Tuple, Literal, TypedDict
+from typing import Dict,Tuple, Literal, TypedDict, List
 from dataclasses import dataclass
 # from ..data.db_history import  ActionToken
 from enum import IntEnum
 
+
+class PlayerPos(TypedDict):
+    id: str
+    row: int
+    col: int
 class ActionToken(IntEnum):
     RIGHT = 1
     LEFT = 2
@@ -36,6 +41,7 @@ class MatrixPayload(TypedDict):
     data: list[int]
     chunk_id: str
     total_players: int
+    players: List[PlayerPos]
 
 class AnnouncementPayload(TypedDict):
     type: Literal["announcement"]

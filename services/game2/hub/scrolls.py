@@ -1,7 +1,7 @@
 #V
 from __future__ import annotations
 import logging
-from typing import Set
+from typing import Set, List
 from fastapi import WebSocket
 from .types import MatrixPayload
 from .ws_utils import  WebSocketUtils
@@ -10,7 +10,7 @@ from .world import WorldService
 from ..core.settings import W, H, BIT_HAS_LINK
 from ..core.bits import get_bit, set_bit
 from ..data.db_scrolls import  ScrollDB
-
+from ..data.db_players import PlayerDB
 from ..data.db_history import PlayerActionHistory
 from .scroll_message import ScrollMessage
 
@@ -20,14 +20,19 @@ logger = logging.getLogger(__name__)
 
 class ScrollService:
     """Manages in-world scroll messages, including broadcasting updates to all watchers in a chunk."""
-    def __init__(self, world: WorldService, sessions: SessionStore, scroll_db : ScrollDB, chunk_db: ChunkDB,player_action_history: PlayerActionHistory ) -> None:
+    def __init__(self, world: WorldService, sessions: SessionStore, scroll_db : ScrollDB, chunk_db: ChunkDB,player_action_history: PlayerActionHistory , player_db : PlayerDB) -> None:
         self.world = world
         self.sessions = sessions
         
         self.scroll_db = scroll_db
         self.chunk_db = chunk_db
         self.player_action_history = player_action_history
+        self.player_db = player_db
 
+    def _players_in_chunk_payload(self, chunk_id : str) -> List[dict]:
+        rows = self.player_db.list_players_in_chunk(chunk_id)
+        return [{"id": pid, "row": r, "col": c} for (pid, r, c) in rows]
+    
     
     async def broadcast_chunk(self, chunk_id: str) -> None:
         board = self.world.ensure_chunk(chunk_id)
@@ -38,6 +43,7 @@ class ScrollService:
             "data": board.flatten().tolist(),
             "chunk_id": chunk_id,
             "total_players": self.sessions.player_count(),
+            "players": self._players_in_chunk_payload(chunk_id),
         }   
         dead: Set[WebSocket] = set()
         for ws in list(self.sessions.watchers(chunk_id)):
@@ -46,8 +52,8 @@ class ScrollService:
              dead.add(ws)
         for ws in dead:
             self.sessions.pop(ws)
-            
         
+
     async def maybe_send_scroll_at(self, ws: WebSocket) -> None:
         sess = self.sessions.get(ws)
         if not sess:
@@ -60,7 +66,7 @@ class ScrollService:
         if get_bit(cell_under, BIT_HAS_LINK):
             if sess.last_msg_pos == current_pos:
                 return
-        msg = self.scroll_db.load_scroll(state.chunk_id, state.pos.row, state.pos.col)
+        msg = await self.scroll_db.load_scroll(state.chunk_id, state.pos.row, state.pos.col)
         if msg:
             await WebSocketUtils.send_json(ws, {"type": "message", "data": msg})
             sess.last_msg_pos = current_pos
@@ -69,11 +75,11 @@ class ScrollService:
 
     async def write_scroll(self, ws: WebSocket, content: str) -> None:
         sess = self.sessions.get(ws)
-        if not sess:
+        if not sess:   
             return
         state = sess.state
         board = self.world.ensure_chunk(state.chunk_id)
-        existing = self.scroll_db.load_scroll(state.chunk_id, state.pos.row, state.pos.col)
+        existing = await  self.scroll_db.load_scroll(state.chunk_id, state.pos.row, state.pos.col)
         if existing or get_bit(board[state.pos.row, state.pos.col], BIT_HAS_LINK):
             await WebSocketUtils.send_json(ws, {
                 "type": "error",
