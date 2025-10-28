@@ -8,11 +8,11 @@ function backendHost(): string {
 }
 function wsUrl(): string {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${proto}//${backendHost()}:8000/ws`///??
+  return `${proto}//${backendHost()}:8000/ws`///??change it to the 7002 port - the port of the game
 }
 function apiBase(): string {
   const http = window.location.protocol === 'https:' ? 'https:' : 'http:'
-  return `${http}//${backendHost()}:8000`
+  return `${http}//${backendHost()}:8000`//?? change also it??
 }
 
 type UseWS = {

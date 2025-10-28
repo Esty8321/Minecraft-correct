@@ -53,12 +53,3 @@ class PlayerDB:
     def close(self)->None:
         """Close the database connection."""
         self.conn.close()
-
-   
-
-
-
-    
-    
-        
-

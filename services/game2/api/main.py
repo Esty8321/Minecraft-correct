@@ -19,6 +19,8 @@ from ..hub.color import ColorService
 from ..hub.ws_utils import WebSocketUtils
 from ..hub.chunk_players import ChunkPlayers
 from ..core.settings import DATA_DIR
+
+from ..chat.chat_manager import chat_endpoint
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 logger = logging.getLogger(__name__)
@@ -90,7 +92,9 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     if typ:
                         ##send to chat manager the type
                         pass
-                        chat_endpoint(ws, typ, data)
+                        player = session_store.get(ws)
+                        player_id = player.state.user_id
+                        chat_endpoint(ws, data, player_id)##??see if we can remove the ws
                     
                     if not isinstance(data, dict):
                         raise ValueError("payload must be an object")

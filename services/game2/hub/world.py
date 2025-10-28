@@ -89,7 +89,7 @@ class WorldService:
                board = self.ensure_chunk(chunk_id)
 
                # ✅ Only paint if the cell is empty (0 or some defined empty value)
-               if BoardUtils.is_empty(board, spawn.row, spawn.col):
+               if BoardUtils.is_empty(board, spawn.row, spawn.col):##??I think that I can remove this condition
                    print("the board is empty there")
                    underlying = torch.zeros_like(board[spawn.row, spawn.col])
                 #    board[spawn.row, spawn.col] = torch.tensor(color, dtype=DTYPE)
@@ -133,25 +133,6 @@ class WorldService:
         if not players and chunk_id in self._chunks:
             del self._chunks[chunk_id]
             logger.info(f"Unloaded chunk {chunk_id} from memory")
-
-    # def find_nearest_player_in_chunk(self, user_id: str) -> Optional[str]:
-    #     """Find the closest player to a given user within the same chunk."""
-    #     me = self.player_db.get_position(user_id)
-    #     if not me:
-    #         return None
-    #     chunk_id, my_row, my_col = me
-    #     others = self.chunk_players.get_players_in_chunk(chunk_id, exclude_id=user_id)
-    #     if not others:
-    #         return None
-
-    #     nearest = None
-    #     nearest_dist = float("inf")
-    #     for pid, r, c in others:
-    #         dist = math.hypot(r - my_row, c - my_col)
-    #         if dist < nearest_dist:
-    #             nearest = pid
-    #             nearest_dist = dist
-    #     return nearest
 
     @staticmethod
     def neighbor_chunk_id(chunk_id: str, direction: Direction) -> str:
