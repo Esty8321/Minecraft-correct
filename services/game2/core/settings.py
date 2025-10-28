@@ -7,15 +7,16 @@ W = H = 64
 DTYPE = torch.uint8
 
 # Bit layout
-# BIT_IS_PLAYER = 0 - not in use now, mabye after
-BIT_HAS_LINK  = 1 
-BIT_R0, BIT_G0, BIT_B0 = 2, 3, 4
-BIT_R1, BIT_G1, BIT_B1 = 5, 6, 7
+
+BIT_IS_PLAYER_IDX = 0
+BIT_HAS_LINK_IDX  = 1 
+BIT_R0_IDX, BIT_G0_IDX, BIT_B0_IDX = 2, 3, 4
+BIT_R1_IDX, BIT_G1_IDX, BIT_B1_IDX = 5, 6, 7
 
 COLOR_BITS = {
-    "r": (BIT_R0, BIT_R1),
-    "g": (BIT_G0, BIT_G1),
-    "b": (BIT_B0, BIT_B1),
+    "r": (BIT_R0_IDX, BIT_R1_IDX),
+    "g": (BIT_G0_IDX, BIT_G1_IDX),
+    "b": (BIT_B0_IDX, BIT_B1_IDX),
 }
 
 # Data paths

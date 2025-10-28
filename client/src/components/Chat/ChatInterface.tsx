@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Send, Smile, Settings, X, Quote } from 'lucide-react';
+import { Send, Smile, Settings, X, Quote, Users } from 'lucide-react';
 import MessageItem from './MessageItem';
 import EmojiPicker from './EmojiPicker';
-import { Message, Player} from '../../types';
+import { Message, Player } from '../../types';
 
 type Reaction = 'up' | 'down' | null;
 
@@ -12,54 +12,12 @@ interface ChatInterfaceProps {
   currentPlayerId: string;
   onSendMessage: (message: string, quotedMessage?: Message) => void;
   onReactMessage: (messageId: string, reaction: Reaction) => void;
-  /** NEW: מחיקה רכה של הודעה (לקוח->שרת דרך ה-hook) */
+  /** מחיקה רכה של הודעה */
   onDeleteMessage: (messageId: string) => void;
-  showEmojiPicker: boolean;
-  setShowEmojiPicker: (show: boolean) => void;
-  onCustomizationToggle: () => void;
-  onMarkRead: (playerId: string) => void;
-}
 
-const SCROLL_STICKY_THRESHOLD = 28;
-
-function ModernToggle({
-  checked,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  label?: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onChange(!checked);
-        }
-      }}
-      className="group inline-flex items-center gap-3 select-none"
-      title="Toggle emoji send behavior"
-    >
-      {label && <span className="text-xs md:text-sm text-slate-200">{label}</span>}
-      <span
-        className={`relative inline-flex h-6 w-11 items-center rounded-full border transition
-          ${checked ? 'bg-cyan-500/90 border-cyan-400 shadow-[0_0_0_2px_rgba(0,255,255,0.15)]'
-                    : 'bg-slate-700/80 border-slate-600'}`}
-      >
-        <span
-          className={`ml-[2px] inline-block h-5 w-5 transform rounded-full bg-white
-                      shadow-md transition-transform duration-300
-                      ${checked ? 'translate-x-5' : 'translate-x-0'}`}
-        />
-      </span>
-    </button>
-  );
+  /** חדש: נתוני שחקנים בצ'אנק + הקרוב ביותר */
+  playersInChunk?: { id: string; username: string; row: number; col: number; chunk_id: string }[];
+  nearestPlayerId?: string;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -68,391 +26,224 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   currentPlayerId,
   onSendMessage,
   onReactMessage,
-  onDeleteMessage, // NEW
-  showEmojiPicker,
-  setShowEmojiPicker,
-  onCustomizationToggle,
-  onMarkRead,
+  onDeleteMessage,   
+  playersInChunk = [],
+  nearestPlayerId
 }) => {
-  const [messageText, setMessageText] = useState('');
-  const [quotedMessage, setQuotedMessage] = useState<Message | null>(null);
-  const [isTyping, setIsTyping] = useState(false);
-  const [isAtBottom, setIsAtBottom] = useState(true);
-  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [input, setInput] = useState('');
+  const [quotedMessage, setQuotedMessage] = useState<Message | undefined>(undefined);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showPlayers, setShowPlayers] = useState(false);
+  const endRef = useRef<HTMLDivElement | null>(null);
 
-  const [sendEmojiImmediately, setSendEmojiImmediately] = useState<boolean>(() => {
-    const v = localStorage.getItem('chat_sendEmojiImmediately');
-    return v ? v === '1' : false;
-  });
+  /** טקסט בטוח להצגה (תומך במחיקה רכה) */
+  const msgText = (m?: Message) =>
+    !m ? '' : ((m as any).deleted ? 'Message deleted' : (m.message ?? ''));
+
+  const canSend = useMemo(() => {
+    if (!selectedPlayer) return false;
+    // ✅ NEW: לא מאפשרים שליחה לעצמי
+    if (selectedPlayer.id === currentPlayerId) return false;
+    // אם לא ידוע nearest – לא חוסמים (מלבד עצמי)
+    if (!nearestPlayerId) return true;
+    // ✅ NEW: רק הקרוב ביותר
+    return selectedPlayer.id === nearestPlayerId;
+  }, [selectedPlayer, nearestPlayerId, currentPlayerId]); // ✅ NEW: הוספת currentPlayerId לתלויות
+
   useEffect(() => {
-    localStorage.setItem('chat_sendEmojiImmediately', sendEmojiImmediately ? '1' : '0');
-  }, [sendEmojiImmediately]);
+    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
-  const [showEmojiMenu, setShowEmojiMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const onDown = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowEmojiMenu(false);
-      }
-    };
-    if (showEmojiMenu) document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [showEmojiMenu]);
+  const handleSend = useCallback(() => {
+    const text = input.trim();
+    if (!text) return;
 
-  const listRef = useRef<HTMLDivElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
-  const messageRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const prevThreadIdRef = useRef<string | null>(null);
-  const prevLenRef = useRef<number>(0);
-
-  // הודעות של השיחה הפעילה בלבד
-  const filteredMessages = useMemo(() => {
-    if (!selectedPlayer) return [];
-    const partner = selectedPlayer.id;
-    return messages
-      .filter(
-        (m) =>
-          (m.from === currentPlayerId && m.to === partner) ||
-          (m.from === partner && m.to === currentPlayerId) ||
-          m.type === 'bot'
-      )
-      .sort((a, b) => (a.timestamp || '').localeCompare(b.timestamp || ''));
-  }, [messages, selectedPlayer, currentPlayerId]);
-
-  // מעבר בין שיחות
-  useEffect(() => {
-    const threadId = selectedPlayer?.id || null;
-    if (prevThreadIdRef.current !== threadId) {
-      messageRefs.current = {};
-      setHighlightedId(null);
-    }
-    if (!threadId) {
-      prevThreadIdRef.current = threadId;
-      prevLenRef.current = filteredMessages.length;
+    // ✅ NEW: מחסום לפני שליחה — לא לעצמי, ורק ל-nearest
+    if (!selectedPlayer) return;
+    if (selectedPlayer.id === currentPlayerId) {
+      alert("You can't chat with yourself.");
       return;
     }
-    onMarkRead(threadId);
-    requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-      setIsAtBottom(true);
-      inputRef.current?.focus();
-    });
-    prevThreadIdRef.current = threadId;
-    prevLenRef.current = filteredMessages.length;
-  }, [selectedPlayer?.id, filteredMessages.length, onMarkRead]);
-
-  // מעקב גלילה
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      const nearBottom = el.scrollHeight - (el.scrollTop + el.clientHeight) <= SCROLL_STICKY_THRESHOLD;
-      setIsAtBottom(nearBottom);
-    };
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
-  }, []);
-
-  // הדבקה לתחתית כשכבר בתחתית
-  useEffect(() => {
-    const grew = filteredMessages.length > prevLenRef.current;
-    if (grew && isAtBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (nearestPlayerId && selectedPlayer.id !== nearestPlayerId) {
+      alert("You can only chat with the nearest player in your chunk.");
+      return;
     }
-    prevLenRef.current = filteredMessages.length;
-  }, [filteredMessages.length, isAtBottom]);
 
-  useEffect(() => {
-    if (selectedPlayer) inputRef.current?.focus();
-  }, [selectedPlayer]);
+    onSendMessage(text, quotedMessage);
+    setInput('');
+    setQuotedMessage(undefined);
+  }, [input, quotedMessage, onSendMessage, selectedPlayer, currentPlayerId, nearestPlayerId]); // ✅ NEW: תלויות מעודכנות
 
-  const markReadAndStick = useCallback(() => {
-    if (!selectedPlayer) return;
-    onMarkRead(selectedPlayer.id);
-    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-    setIsAtBottom(true);
-  }, [onMarkRead, selectedPlayer]);
-
-  const handleMessagesAreaClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!selectedPlayer) return;
-      const target = e.target as HTMLElement;
-      const interactive = target.closest(
-        'button, a, input, textarea, select, [role="button"], [contenteditable="true"], [data-no-stick]'
-      );
-      if (interactive) return;
-      if (!isAtBottom) return;
-      markReadAndStick();
-    },
-    [selectedPlayer, isAtBottom, markReadAndStick]
-  );
-
-  // שליחה
-  const handleSendMessage = useCallback(() => {
-    const text = messageText.trim();
-    if (!text || !selectedPlayer) return;
-    onSendMessage(text, quotedMessage || undefined);
-    setMessageText('');
-    setQuotedMessage(null);
-    setIsTyping(false);
-    markReadAndStick();
-  }, [messageText, selectedPlayer, onSendMessage, quotedMessage, markReadAndStick]);
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
-
-  // הקלדה
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMessageText(e.target.value);
-    if (!isTyping) setIsTyping(true);
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 1000);
-    if (selectedPlayer && isAtBottom) markReadAndStick();
-  };
-
-  // אימוג'י / GIF
-  const handleEmojiSelect = (emoji: string) => {
-    if (!selectedPlayer) return;
-    if (sendEmojiImmediately) {
-      onSendMessage(emoji);
-      setShowEmojiPicker(false);
-      if (isAtBottom) markReadAndStick();
-    } else {
-      setMessageText((prev) => prev + emoji);
-      inputRef.current?.focus();
-      if (isAtBottom) markReadAndStick();
-    }
-  };
-
-  const handleGifSelect = (gifUrl: string) => {
-    if (!selectedPlayer) return;
-    onSendMessage(gifUrl);
-    setShowEmojiPicker(false);
-    if (isAtBottom) markReadAndStick();
-  };
-
-  // בחירת הודעה לציטוט
-  const handleQuoteMessage = (message: Message) => {
-    setQuotedMessage(message);
-    inputRef.current?.focus();
-    if (selectedPlayer && isAtBottom) markReadAndStick();
-  };
-
-  // קפיצה להודעה המצוטטת + הדגשה סביב הבועה (נמחקת בלחיצה מחוץ לבועה בתוך MessageItem)
-  const onScrollToQuotedMessage = useCallback((quotedMessageId: string) => {
-    const el = messageRefs.current[quotedMessageId] || null;
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setHighlightedId(quotedMessageId);
-  }, []);
+  const handleEmojiSelect = (emoji: string) => setInput((v) => v + emoji);
+  const handleGifSelect = (gifUrl: string) => setInput((v) => v + ` ${gifUrl} `);
 
   return (
-    <div className="flex-1 flex flex-col bg-gradient-to-br from-slate-950 to-slate-900 text-slate-100">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-800/70 bg-slate-900/70 backdrop-blur-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {selectedPlayer ? (
-              <>
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-900/30">
-                  {selectedPlayer.username?.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold tracking-tight">{selectedPlayer.username}</h3>
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-green-600/20 text-green-300 border border-green-500/30">
-                      {selectedPlayer.status || 'online'}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400">Level {selectedPlayer.level || 1}</p>
-                </div>
-              </>
-            ) : (
-              <div className="text-slate-400">Select a player to start chatting</div>
-            )}
-          </div>
+    <div className="flex flex-col h-full">
+      {/* Toolbar */}
+      <div className="px-4 py-2 border-b border-slate-700 flex items-center justify-between">
+        <div className="text-sm">
+          {selectedPlayer ? (
+            <>
+              Chat with <span className="font-semibold">{selectedPlayer.username}</span>
+              {selectedPlayer.id === currentPlayerId && (
+                <span className="ml-1 text-xs px-1 py-0.5 rounded bg-emerald-600/40 border border-emerald-500/60">you</span>
+              )}
+              {nearestPlayerId && selectedPlayer.id === nearestPlayerId && selectedPlayer.id !== currentPlayerId && (
+                <span className="ml-1 text-xs px-1 py-0.5 rounded bg-sky-600/40 border border-sky-500/60">nearest</span>
+              )}
+            </>
+          ) : (
+            <span className="text-slate-400">Select a player to start</span>
+          )}
+        </div>
 
+        <div className="flex items-center gap-2">
+          {/* Players in chunk modal toggle */}
           <button
-            onClick={onCustomizationToggle}
-            className="px-3 py-1.5 text-sm rounded-lg border border-slate-700 bg-slate-800/70 hover:bg-slate-700/70 transition-colors flex items-center gap-2"
+            onClick={() => setShowPlayers((v) => !v)}
+            title="Players in chunk"
+            className="p-2 rounded hover:bg-slate-600/50"
           >
-            <Settings className="w-4 h-4" />
-            Customize
+            <Users size={18} />
+          </button>
+
+          <button className="p-2 rounded hover:bg-slate-600/50" title="Settings">
+            <Settings size={18} />
           </button>
         </div>
       </div>
 
-      {/* Messages */}
-      <div
-        ref={listRef}
-        onClick={handleMessagesAreaClick}
-        className="flex-1 overflow-y-auto p-3 md:p-4 space-y-px bg-gradient-to-b from-slate-950 to-slate-900/70"
-      >
-        {selectedPlayer ? (
-          <>
-            {filteredMessages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                <div className="text-6xl mb-4">💬</div>
-                <p className="text-lg mb-2">Start the conversation!</p>
-                <p className="text-sm">Send your first message to {selectedPlayer.username}</p>
-              </div>
-            ) : (
-              filteredMessages.map((message, idx) => (
-                <div
-                  key={message.id}
-                  ref={(el) => {
-                    messageRefs.current[message.id] = el;
-                  }}
-                >
-                  <MessageItem
-                    message={message}
-                    prevMessage={idx > 0 ? filteredMessages[idx - 1] : null}
-                    nextMessage={idx < filteredMessages.length - 1 ? filteredMessages[idx + 1] : null}
-                    isOwn={message.from === currentPlayerId}
-                    onReact={onReactMessage}
-                    onQuote={handleQuoteMessage}
-                    currentPlayerId={currentPlayerId}
-                    onJumpTo={onScrollToQuotedMessage}
-                    isHighlighted={highlightedId === message.id}
-                    onClearHighlight={() => setHighlightedId(null)}
-                    /** NEW: העברת מחיקה רכה לתוך MessageItem */
-                    onDelete={(id) => onDeleteMessage(id)}
-                  />
-                </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400">
-            <div className="text-6ל mb-4">🎮</div>
-            <p className="text-lg mb-2">Welcome to Game Chat!</p>
-            <p className="text-sm">Select a player from the sidebar to start chatting</p>
-          </div>
-        )}
+      {/* Messages list */}
+      <div className="flex-1 overflow-auto p-4 space-y-2">
+        {messages.map((m, idx) => {
+          const prevMessage = idx > 0 ? messages[idx - 1] : null;
+          const nextMessage = idx < messages.length - 1 ? messages[idx + 1] : null;
+          const isOwn = m.from === currentPlayerId;
+
+          return (
+            <MessageItem
+              key={m.id}
+              message={m}
+              prevMessage={prevMessage}
+              nextMessage={nextMessage}
+              isOwn={isOwn}
+              currentPlayerId={currentPlayerId}
+              onReact={(messageId, reaction) => onReactMessage(messageId, reaction)}
+              onDelete={(id) => onDeleteMessage(id)}
+              onQuote={() => setQuotedMessage(m)}
+            />
+          );
+        })}
+        <div ref={endRef} />
       </div>
 
-      {/* Quoted bar */}
+      {/* Quoted message preview */}
       {quotedMessage && (
-        <div className="px-4 py-2 bg-slate-800/70 border-t border-slate-800/60">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Quote className="w-4 h-4 text-slate-400" />
-              <span className="text-sm text-slate-300">
-                Replying to <span className="font-semibold">{quotedMessage.from}</span>:{" "}
-                {/* NEW: אם המצוטט נמחק – מציגים placeholder */}
-                {(quotedMessage as any).deleted ? 'Message deleted' : quotedMessage.message.slice(0, 50)}...
-              </span>
-            </div>
-            <button onClick={() => setQuotedMessage(null)} className="p-1 text-slate-400 hover:text-white">
-              <X className="w-4 h-4" />
-            </button>
+        <div className="px-4 py-2 border-t border-slate-700 bg-slate-800/60 text-xs flex items-center gap-2">
+          <Quote size={14} />
+          <div className="flex-1 truncate">
+            Replying to <span className="font-semibold">{quotedMessage.from}</span>: {msgText(quotedMessage)}
           </div>
+          <button className="p-1 rounded hover:bg-slate-700" onClick={() => setQuotedMessage(undefined)}>
+            <X size={16} />
+          </button>
         </div>
       )}
 
-      {/* Composer */}
-      <div className="px-4 md:px-6 py-4 border-t border-slate-800/70 bg-slate-900/70 backdrop-blur-md relative">
-        <div className="flex items-end gap-3">
-          {/* Emoji */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className={`relative p-3 rounded-xl transition-all duration-200 hover:scale-105 border
-                ${showEmojiPicker
-                  ? 'bg-cyan-600 text-white border-cyan-500'
-                  : sendEmojiImmediately
-                    ? 'bg-slate-800 text-cyan-300 border-cyan-500/40 hover:bg-slate-700'
-                    : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white hover:bg-slate-700'
-                }`}
-              title="Emojis"
-            >
-              <Smile className="w-5 h-5" />
-              <span
-                onClick={(e) => { e.stopPropagation(); setShowEmojiMenu((v) => !v); }}
-                className={`absolute -top-1 -right-1 rounded-full px-1.5 py-[2px] text-[10px] font-semibold
-                  border ${showEmojiMenu ? 'bg-slate-900 border-cyan-400 text-cyan-300' : 'bg-slate-900 border-slate-600 text-slate-300'}`}
-                title="More options"
-                aria-label="More emoji options"
-              >
-                ⋯
-              </span>
-            </button>
+      {/* Input */}
+      <div className="p-3 border-t border-slate-700 flex items-center gap-2">
+        <button
+          className="p-2 rounded hover:bg-slate-700"
+          title="Emoji / GIF"
+          onClick={() => setShowEmojiPicker((v) => !v)}
+        >
+          <Smile size={18} />
+        </button>
 
-            {showEmojiMenu && (
-              <div
-                ref={menuRef}
-                className="absolute left-0 bottom-full mb-2 w-64 rounded-xl border border-slate-700 bg-slate-900 shadow-2xl z-50 p-3"
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                <div className="text-slate-300 text-sm mb-2">Emoji options</div>
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              if (canSend) handleSend();
+            }
+          }}
+          className="flex-1 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500"
+          placeholder={
+            selectedPlayer
+              ? canSend
+                ? `Message ${selectedPlayer.username}...`
+                : `You can only chat with the nearest player`
+              : 'Select a player...'
+          }
+        />
 
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-slate-200 text-sm">Send emoji instantly</span>
-                  <ModernToggle
-                    checked={sendEmojiImmediately}
-                    onChange={(v) => setSendEmojiImmediately(v)}
-                  />
-                </div>
-
-                <button
-                  className="mt-2 ו-full text-left text-sm px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
-                  onClick={() => { setShowEmojiPicker(true); setShowEmojiMenu(false); }}
-                >
-                  Open Emoji Picker
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Input */}
-          <div className="flex-1">
-            <input
-              ref={inputRef}
-              type="text"
-              value={messageText}
-              onChange={handleInputChange}
-              onKeyPress={handleKeyPress}
-              placeholder={selectedPlayer ? `Message ${selectedPlayer.username}...` : 'Select a player to chat...'}
-              disabled={!selectedPlayer}
-              className="w-full px-4 py-3 rounded-xl bg-slate-950/70 border border-slate-800 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-600/40 focus:border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-inner shadow-black/30"
-            />
-          </div>
-
-          {/* Send */}
-          <button
-            onClick={handleSendMessage}
-            disabled={!messageText.trim() || !selectedPlayer}
-            className="px-4 py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-cyan-900/20"
-            title="Send"
-          >
-            <Send className="w-5 h-5" />
-            <span className="hidden sm:inline text-sm font-semibold">Send</span>
-          </button>
-        </div>
-
-        {isTyping && selectedPlayer && (
-          <div className="text-[11px] text-slate-400 mt-2">You are typing...</div>
-        )}
-
-        {showEmojiPicker && (
-          <EmojiPicker
-            onEmojiSelect={handleEmojiSelect}
-            onGifSelect={handleGifSelect}
-            onClose={() => setShowEmojiPicker(false)}
-          />
-        )}
+        <button
+          onClick={handleSend}
+          disabled={!input.trim() || !canSend}
+          className={`px-3 py-2 rounded flex items-center gap-2 transition ${
+            !input.trim() || !canSend
+              ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
+        >
+          <Send size={16} />
+          Send
+        </button>
       </div>
+
+      {/* Emoji/GIF picker */}
+      {showEmojiPicker && (
+        <EmojiPicker
+          onEmojiSelect={handleEmojiSelect}
+          onGifSelect={handleGifSelect}
+          onClose={() => setShowEmojiPicker(false)}
+        />
+      )}
+
+      {/* Players modal */}
+      {showPlayers && (
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 border border-slate-600 rounded-xl p-4 w-80 max-h-[70vh] overflow-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-2">
+              <div className="font-semibold">Players in this chunk</div>
+              <button className="p-1 rounded hover:bg-slate-700" onClick={() => setShowPlayers(false)}>
+                <X size={16} />
+              </button>
+            </div>
+            <ul className="space-y-2">
+              {playersInChunk.map((p) => {
+                const isMe = p.id === currentPlayerId;
+                const isNearest = p.id === (nearestPlayerId || '');
+                return (
+                  <li
+                    key={p.id}
+                    className={`flex items-center justify-between p-2 rounded border ${
+                      isNearest ? 'border-emerald-500 animate-pulse' : 'border-slate-600'
+                    } ${!isMe && !isNearest ? 'opacity-60' : ''}`}
+                  >
+                    <span>
+                      {p.username}{' '}
+                      {isMe && (
+                        <span className="ml-1 text-xs px-1 py-0.5 rounded bg-emerald-600/40 border border-emerald-500/60">
+                          you
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      ({p.row},{p.col})
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default ChatInterface;
+

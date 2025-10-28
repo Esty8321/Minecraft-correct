@@ -1,88 +1,64 @@
-# Ignore local data folder
-data/
-data/**
+# =========================================
+# === General Python ignores ===
+# =========================================
 
-# Ignore compiled Python files
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-db_chunks
-# VSCode debug cache
-.vscode/chrome-debug-profile/
-.vscode/chrome-debug-profile/**
-
-# ======================
-# Python
-# ======================
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.sqlite3
-*.db
 *.log
 *.pid
 
-# ======================
-# Virtual environments
-# ======================
+# =========================================
+# === VS Code settings ===
+# =========================================
+.vscode/
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.vscode/chrome-debug-profile/
+.vscode/chrome-debug-profile/**
+
+# =========================================
+# === Virtual environments ===
+# =========================================
 .venv/
 env/
 venv/
 
-# ======================
-# VS Code settings
-# ======================
-.vscode/
-!.vscode/settings.json   # keep your settings if you want
-!.vscode/launch.json     # keep your launch config if useful
-!.vscode/extensions.json
-
-# ======================
-# Chrome / Debug profiles
-# ======================
-.vscode/chrome-debug-profile/
-.vscode/chrome-debug-profile/**
-
-# ======================
-# Node / JS stuff (if any frontend exists)
-# ======================
+# =========================================
+# === Node / JS frontend ===
+# =========================================
 node_modules/
 dist/
 build/
 
-# ======================
-# Local data folder
-# ======================
-data/
-data/**
-data/players.db 
-data/world.db
+# =========================================
+# === Local databases (root only) ===
+# =========================================
+/data/
+/data/**
+/data/*.db
+/data/*.db-shm
+/data/*.db-wal
+/data/history.json
+/data/players.db
+/data/world.db
 
-# ======================
-# OS / temp files
-# ======================
+# =========================================
+# === OS / Temp files ===
+# =========================================
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# VSCode
-.vscode/  
-!.vscode/launch.json
-.vscode/chrome-debug-profile/
+# =========================================
+# === Ignore local model/training folders ===
+# =========================================
+bot_gru/
 
-
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-
-bot_gru
-# Local data (SQLite etc.)
-data/*.db
-data/*.db-shm
-data/*.db-wal
-data/history.json
-
-bot_gru
+# =========================================
+# === Explicitly track service data folder ===
+# =========================================
+!services/game2/data/
+!services/game2/data/db_scrolls.py

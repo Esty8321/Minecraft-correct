@@ -8,7 +8,7 @@ import asyncio
 import json
 import os
 import httpx
-from services.game.db_history import append_player_action, TOKEN_DM
+from services.game2.data.db_history import append_player_action, TOKEN_DM
 
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://127.0.0.1:7001")
 GAME_SERVICE_URL = "http://127.0.0.1:7002"

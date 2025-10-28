@@ -13,6 +13,7 @@ class BoardUtils:
           return board[r, c].item() == 0
 
 
+
     @staticmethod
     def in_bounds(r: int, c: int) -> bool:
         return 0 <= r < H and 0 <= c < W

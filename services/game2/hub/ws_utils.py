@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 class WebSocketUtils:
     """Helper functions for safely sending JSON over WebSockets."""
-
+   
     @staticmethod
     async def send_json(ws: WebSocket, payload: Any) -> bool:
         try:
