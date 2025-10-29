@@ -7,17 +7,16 @@ from .types import Coord, PlayerState, Direction
 
 class BoardUtils:
     """Provides helper methods for board geometry: checking bounds, emptiness, edges, and random spawn cells."""
-
+   
     @staticmethod
     def is_empty(board: torch.Tensor, r: int, c: int) -> bool:
           return board[r, c].item() == 0
 
 
-
     @staticmethod
     def in_bounds(r: int, c: int) -> bool:
         return 0 <= r < H and 0 <= c < W
-
+     
     @staticmethod
     def edge_direction(nr: int, nc: int) -> Direction:
         if nr < 0:

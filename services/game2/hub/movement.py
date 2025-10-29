@@ -29,7 +29,9 @@ class MovementService:
         nr, nc = state.pos.row + dr, state.pos.col + dc
         if BoardUtils.in_bounds(nr, nc):
             board = self.world.ensure_chunk(state.chunk_id)
-            if not BoardUtils.is_empty(board, nr, nc):
+            # if not BoardUtils.is_empty(board, nr, nc):
+            #     return MoveResult(False)
+            if not self.chunk_players.is_cell_free(state.chunk_id, nr, nc):
                 return MoveResult(False)
             await self.move_within_chunk(state, board, nr, nc)
             return MoveResult(True, None)
@@ -59,9 +61,12 @@ class MovementService:
         new_board = self.world.ensure_chunk(new_chunk_id)
         target = BoardUtils.edge_target_for_direction(state, direction)
 
-        if not BoardUtils.is_empty(new_board, target.row, target.col):
-            return False, old_chunk_id
-
+        # if not BoardUtils.is_empty(new_board, target.row, target.col):
+            # return False, old_chunk_id
+        if not self.chunk_players.is_cell_free(state.chunk_id, target.row, target.col):
+                return False, old_chunk_id
+            
+        ##??chekc if I need to chekc is_empty that the user wil not chage the color of the pixel if it already colored
         async with self.world._lock_for(old_chunk_id):
             old_board[state.pos.row, state.pos.col] = state.underlying_cell
             self.world._mark_dirty(old_chunk_id)

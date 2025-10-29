@@ -6,8 +6,8 @@ from .services.presence import add_socket, remove_socket, send_to_all, get_selec
 from .services.messages import (
     append_message, get_message_by_id, history_between,
     mark_read_pair, unread_count_for, soft_delete_message_by_id, minimal_view
-)
-
+)   
+   
 async def chat_endpoint(ws: WebSocket, typ: str, data, player_id):
             typ = (data.get("type") or "").lower()##??to see how to call it
             if typ == "select":
@@ -63,7 +63,7 @@ async def chat_endpoint(ws: WebSocket, typ: str, data, player_id):
 
                 await ws.send_json({"type": "react", "messageId": msg_id, "my_reaction": reaction})
                 return
-
+    
             if typ == "message":
                 text = data.get("message", "")
                 partner = data.get("selectedPlayer") or get_selected(player_id)

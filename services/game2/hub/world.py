@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 class WorldService:
     """Manages the game world, chunks, and player positions."""
-
     def __init__(self, chunk_db: ChunkDB, player_db: PlayerDB, player_actions_history: PlayerActionHistory, chunk_players: ChunkPlayers) -> None:
         self.chunk_db = chunk_db
         self.player_db = player_db
@@ -109,7 +108,6 @@ class WorldService:
                user_id=user_id,
                chunk_id=chunk_id,
                pos=spawn,
-            #    visible_cell=torch.tensor(color, dtype=DTYPE),
                visible_cell=color,
                underlying_cell=underlying,
                color=color,

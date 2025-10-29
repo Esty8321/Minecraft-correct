@@ -32,7 +32,7 @@ const ChatRoot: React.FC<ChatRootProps> = ({ onClose, playerId, currentChunkId }
     selectPlayer,
     reactToMessage,
     deleteMessage,
-    currentPlayerId,                // מגיע מה־WS (לא נשתמש בו כ"אני")
+    currentPlayerId,  //??here put the id of the current user              // מגיע מה־WS (לא נשתמש בו כ"אני")
     unreadCounts,
     markRead,
   } = useWebSocket();
