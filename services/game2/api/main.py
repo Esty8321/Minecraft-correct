@@ -77,16 +77,17 @@ async def _handle_command(ws: WebSocket, data: IncomingMsg) -> None:
         logger.exception("Action failed for key=%s: %s", command, e)
         await WebSocketUtils.send_json(ws, {"ok": False, "error": "action_failed", "msg": str(e)})
 
+
     
 @app.websocket("/ws")
+
 async def ws_endpoint(ws: WebSocket) -> None:
     """Main WebSocket entrypoint handling both game and chat traffic."""
     await ws.accept()
-    print("[GAME][WS] accepted; auth=%s", bool(ws.headers.get("authorization")))
-
+    print("New WebSocket connection")
     await hub.connect(ws)
 
-    try:     
+    try:
         while True:
             try:
                 raw = await ws.receive_text()
