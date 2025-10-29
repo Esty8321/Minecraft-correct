@@ -1,4 +1,4 @@
-// import React, { useEffect, useState, useCallback, useRef } from "react";
+// import React, { useEffect, useState, useCallback } from "react";
 // import {
 //   Wifi,
 //   WifiOff,
@@ -12,8 +12,7 @@
 // import { MessageBubble } from "./MessageBubble";
 // import { MessageInput } from "./MessageInput";
 // import ChatRoot from "./Chat/ChatRoot";
-
-// const ENV_WS = (import.meta as any).env?.VITE_GAME_WS as string | undefined;
+// import { useWebSocket } from "../hooks/useWebSocket"; // ✅ shared socket hook
 
 // interface GameState {
 //   w: number;
@@ -22,217 +21,83 @@
 //   chunk_id?: string;
 // }
 
-// interface VoxelGridProps {
-//   serverUrl?: string;
-// }
-
-// const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
+// const VoxelGrid: React.FC = () => {
+//   const { isConnected, sendCommand } = useWebSocket(); // ✅ shared WebSocket
 //   const [gameState, setGameState] = useState<GameState | null>(null);
-//   const [connected, setConnected] = useState(false);
 //   const [playerCount, setPlayerCount] = useState(0);
-//   const [lastAction, setLastAction] = useState<string>("");
+//   const [lastAction, setLastAction] = useState("");
 //   const [notice, setNotice] = useState<string | null>(null);
 //   const [showChat, setShowChat] = useState(false);
-
-//   const wsRef = useRef<WebSocket | null>(null);
-//   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-//   const reconnectingRef = useRef<boolean>(false);
-
+//   const [players, setPlayers] = useState<
+//     Array<{ id: string; row: number; col: number }>
+//   >([]);
 //   const [showMessageInput, setShowMessageInput] = useState(false);
 //   const [currentMessage, setCurrentMessage] = useState<any>(null);
 //   const [error, setError] = useState<string | null>(null);
 
-//   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-//   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+//   // === Listen to game updates from useWebSocket ===
+//   useEffect(() => {
+//     const handleGameUpdate = (ev: CustomEvent) => {
+//       const data = ev.detail;
 
-//   const [players, setPlayers] = useState<Array<{ id: string; row: number; col: number }>>([]);
+//       if (data.type === "matrix") {
+//         setGameState({
+//           w: data.w,
+//           h: data.h,
+//           data: data.data,
+//           chunk_id: data.chunk_id,
+//         });
 
-//   const dbg = (...args: any[]) => console.log("[VoxelGrid]", ...args);
+//         const newPlayers = Array.isArray(data.players) ? data.players : [];
+//         setPlayers(newPlayers);
+//         setPlayerCount(data.total_players ?? newPlayers.length);
 
-//   const getWebSocketUrl = useCallback((): string => {
-//     if (serverUrl && serverUrl.startsWith("ws")) {
-//       dbg("WS base from prop serverUrl:", serverUrl);
-//       return serverUrl;
-//     }
-//     if (ENV_WS && ENV_WS.startsWith("ws")) {
-//       dbg("WS base from ENV VITE_GAME_WS:", ENV_WS);
-//       return ENV_WS;
-//     }
-//     const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-//     const fallback = `${proto}//${window.location.host}/game/ws`;
-//     dbg("WS base from location (fallback):", fallback);
-//     return fallback;
-//   }, [serverUrl]);
-
-//   const connectWebSocket = useCallback(() => {
-//     if (
-//       wsRef.current &&
-//       (wsRef.current.readyState === WebSocket.OPEN ||
-//         wsRef.current.readyState === WebSocket.CONNECTING)
-//     ) {
-//       dbg("WS already open/connecting; skipping");
-//       return;
-//     }
-
-//     try {
-//       const base = getWebSocketUrl();
-//       const token =
-//         authStorage.getToken?.() ?? localStorage.getItem("token") ?? "";
-
-//       dbg("Pre-WS: base =", base);
-//       dbg("Pre-WS: token exists?", !!token, "len:", token?.length || 0);
-
-//       if (!base) {
-//         setNotice("Missing WebSocket base URL");
-//         setConnected(false);
-//         return;
-//       }
-//       if (!token) {
-//         setNotice("Missing auth token — please login again");
-//         setConnected(false);
-//         return;
+//         // track chunk
+//         const newChunkId = String(data.chunk_id || "");
+//         if (newChunkId && newChunkId !== sessionStorage.getItem("current_chunk_id")) {
+//           sessionStorage.setItem("current_chunk_id", newChunkId);
+//           window.dispatchEvent(new Event("chunkChanged"));
+//         }
 //       }
 
-//       const url = `${base}?token=${encodeURIComponent(token)}&jwt=${encodeURIComponent(token)}`;
-//       dbg("Connecting WS to:", url);
+//       if (data.type === "announcement" && data.data?.text) {
+//         setNotice(String(data.data.text));
+//         setTimeout(() => setNotice(null), 3000);
+//       }
+//     };
 
-//       const ws = new WebSocket(url);
-//       wsRef.current = ws;
-//       (window as any).ws = ws;
-
-//       ws.onopen = () => {
-//         dbg("WS open");
-//         setConnected(true);
-//         try {
-//           ws.send(JSON.stringify({ command: "whereami" }));
-//         } catch (e) {
-//           dbg("WS send whereami failed:", e);
-//         }
-//       };
-
-//       ws.onmessage = (event) => {
-//         try {
-//           const data = JSON.parse(event.data);
-
-//           if (typeof data.total_players === "number") {
-//             setPlayerCount(data.total_players);
-//           }
-
-//           if (data.type === "matrix") {
-//             setGameState({
-//               w: data.w,
-//               h: data.h,
-//               data: data.data,
-//               chunk_id: data.chunk_id,
-//             });
-
-//             const newPlayers = Array.isArray(data.players) ? data.players: [];
-//             setPlayers(newPlayers)
-//             console.log("players in current chunk:", newPlayers);
-            
-            
-//             const newChunkId = String(data.chunk_id || "");
-//             if (newChunkId && newChunkId !== sessionStorage.getItem("current_chunk_id")) {
-//               sessionStorage.setItem("current_chunk_id", newChunkId);
-//               window.dispatchEvent(new Event("chunkChanged")); // 👈 שליחת אירוע גלובלי
-//             }
-//             if (data.chunk_id) {
-//               sessionStorage.setItem("current_chunk_id", String(data.chunk_id));
-//             }
-//             // fallback: אם אין total_players, נספור לוקלית
-//             if (typeof data.total_players !== "number") {
-//               const players = data.data.filter((cell: number) => (cell & 1) === 1);
-//               setPlayerCount(players.length);
-//             }
-//           } else if (data.type === "message" && data.data) {
-//             setCurrentMessage(data.data);
-//             if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-//             hideTimerRef.current = setTimeout(() => setCurrentMessage(null), 5000);
-//           } else if (data.type === "error" && data.code === "SPACE_OCCUPIED") {
-//             setError("Oops! This spot already has a message! 📫");
-//             setTimeout(() => setError(null), 3000);
-//           } else if (data.type === "announcement" && data.data?.text) {
-//             if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
-//             setNotice(String(data.data.text));
-//             noticeTimerRef.current = setTimeout(() => setNotice(null), 3000);
-//           }
-//         } catch (e) {
-//           dbg("onmessage parse error:", e);
-//         }
-//       };
-
-//       ws.onclose = (ev) => {
-//         console.log("[WS close]", { code: ev.code, reason: ev.reason, wasClean: ev.wasClean });
-//         setConnected(false);
-//         setGameState(null);
-//         setPlayerCount(0);
-//         if (!reconnectingRef.current) {
-//           reconnectingRef.current = true;
-//           reconnectTimeoutRef.current = setTimeout(() => {
-//             reconnectingRef.current = false;
-//             connectWebSocket();
-//           }, 3000);
-//         }
-//       };
-
-//       ws.onerror = (e) => {
-//         dbg("WS error", e);
-//         setConnected(false);
-//       };
-//     } catch (e) {
-//       dbg("connectWebSocket exception:", e);
-//       setConnected(false);
-//     }
-//   }, [getWebSocketUrl]);
-
-//   const sendMessage = useCallback((message: any) => {
-//     if (wsRef.current?.readyState === WebSocket.OPEN) {
-//       wsRef.current.send(JSON.stringify(message));
-//     }
+//     window.addEventListener("game-update", handleGameUpdate as EventListener);
+//     return () =>
+//       window.removeEventListener("game-update", handleGameUpdate as EventListener);
 //   }, []);
 
-//   function isTypingInInput(): boolean {
-//     const active = document.activeElement as HTMLElement | null;
-//     if (!active) return false;
-//     const tag = active.tagName.toLowerCase();
-//     const editable = active.getAttribute("contenteditable");
-//     return tag === "input" || tag === "textarea" || editable === "true";
-//   }
-
+//   // === Handle key presses ===
 //   const handleKeyPress = useCallback(
 //     (event: KeyboardEvent) => {
-//       if (!connected) return;
-//       if (isTypingInInput()) return;
-
-//       if (showMessageInput) {
-//         if (event.key === "Escape") {
-//           setShowMessageInput(false);
-//           event.preventDefault();
-//         }
-//         return;
-//       }
+//       if (!isConnected) return;
 
 //       const key = event.key.toLowerCase();
 //       let action = "";
+
 //       switch (key) {
 //         case "arrowup":
 //         case "w":
-//           sendMessage({ command: "up" });
+//           sendCommand("up");
 //           action = "Moved Up";
 //           break;
 //         case "arrowdown":
 //         case "s":
-//           sendMessage({ command: "down" });
+//           sendCommand("down");
 //           action = "Moved Down";
 //           break;
 //         case "arrowleft":
 //         case "a":
-//           sendMessage({ command: "left" });
+//           sendCommand("left");
 //           action = "Moved Left";
 //           break;
 //         case "arrowright":
 //         case "d":
-//           sendMessage({ command: "right" });
+//           sendCommand("right");
 //           action = "Moved Right";
 //           break;
 //         case "m":
@@ -240,32 +105,19 @@
 //           action = "Writing Message";
 //           break;
 //         case "c":
-//           sendMessage({ command: "c" });
+//           sendCommand("c");
 //           action = "Color Changed";
 //           break;
-//       }//??add action of open the chat v
+//       }
+
 //       if (action) {
 //         setLastAction(action);
-//         window.setTimeout(() => setLastAction(""), 2000);
+//         setTimeout(() => setLastAction(""), 1500);
 //         event.preventDefault();
 //       }
 //     },
-//     [connected, sendMessage, showMessageInput]
+//     [isConnected, sendCommand]
 //   );
-
-//   useEffect(() => {
-//     connectWebSocket();
-//     return () => {
-//       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
-//       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-//       if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
-//       try {
-//         wsRef.current?.close();
-//         wsRef.current = null;
-//         (window as any).ws = null;
-//       } catch { }
-//     };
-//   }, [connectWebSocket]);
 
 //   useEffect(() => {
 //     const onKeyDown = (e: KeyboardEvent) => handleKeyPress(e);
@@ -273,46 +125,50 @@
 //     return () => window.removeEventListener("keydown", onKeyDown);
 //   }, [handleKeyPress]);
 
+//   // === Render the voxel grid ===
 //   const renderGrid = () => {
 //     if (!gameState) return null;
-    
-//     const playerSet = new Set(players.map(p => `${p.row},${p.col}`));
 
+//     const playerSet = new Set(players.map((p) => `${p.row},${p.col}`));
 //     const cells: JSX.Element[] = [];
+
 //     for (let r = 0; r < gameState.h; r++) {
 //       for (let c = 0; c < gameState.w; c++) {
 //         const i = r * gameState.w + c;
 //         const v = gameState.data[i];
 //         const isPlayer = (v & 1) === 1;
-
 //         const getBit = (x: number, bit: number) => (x >> bit) & 1;
 //         const get2 = (x: number, b0: number, b1: number) =>
 //           (getBit(x, b1) << 1) | getBit(x, b0);
 //         const r2 = get2(v, 2, 5);
-//         const g2 = get2(v, 3, 6);   
+//         const g2 = get2(v, 3, 6);
 //         const b2 = get2(v, 4, 7);
 //         const blank = !isPlayer && r2 === 0 && g2 === 0 && b2 === 0;
 //         const map = [0, 85, 170, 255];
 //         const color = `rgb(${map[r2]}, ${map[g2]}, ${map[b2]})`;
 
-//         const isPlayersHere = playerSet.has(`${r},${c}`)
+//         const isPlayersHere = playerSet.has(`${r},${c}`);
 //         cells.push(
 //           <div
 //             key={`${r}-${c}`}
 //             className={`voxel-cell ${isPlayer ? "voxel-player" : "voxel-empty"}`}
 //             style={{
 //               backgroundColor: blank ? "transparent" : color,
-//               outline: isPlayersHere ? "1px solid rgba(255,255,255,0.6)" : "none",
+//               outline: isPlayersHere
+//                 ? "1px solid rgba(255,255,255,0.6)"
+//                 : "none",
 //             }}
 //           />
 //         );
 //       }
 //     }
+
 //     return cells;
 //   };
 
 //   return (
 //     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-x-hidden">
+//       {/* Header */}
 //       <div className="container mx-auto px-4 pt-8">
 //         <div className="text-center mb-6">
 //           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
@@ -325,19 +181,22 @@
 
 //         <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
 //           <div
-//             className={`flex items-center gap-2 px-4 py-2 rounded-full ${connected ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"
-//               }`}
+//             className={`flex items-center gap-2 px-4 py-2 rounded-full ${
+//               isConnected
+//                 ? "bg-green-500/20 text-green-300"
+//                 : "bg-red-500/20 text-red-300"
+//             }`}
 //           >
-//             {connected ? <Wifi size={18} /> : <WifiOff size={18} />}
+//             {isConnected ? <Wifi size={18} /> : <WifiOff size={18} />}
 //             <span className="font-medium">
-//               {connected ? "Connected" : "Connecting..."}
+//               {isConnected ? "Connected" : "Connecting..."}
 //             </span>
 //           </div>
 
 //           <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-300">
 //             <Users size={18} />
 //             <span className="font-medium">{playerCount} Players</span>
-//           </div>   
+//           </div>
 
 //           {lastAction && (
 //             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 text-purple-300 animate-pulse">
@@ -348,10 +207,12 @@
 //         </div>
 //       </div>
 
+//       {/* Grid + Chat */}
 //       <div className="flex flex-row-reverse min-h-[60vh]">
 //         <div
-//           className={`transition-all duration-500 ${showChat ? "w-3/4" : "w-full"
-//             } flex justify-center items-center px-4`}
+//           className={`transition-all duration-500 ${
+//             showChat ? "w-3/4" : "w-full"
+//           } flex justify-center items-center px-4`}
 //         >
 //           {gameState ? (
 //             <div
@@ -377,25 +238,30 @@
 //           )}
 //         </div>
 
-//         {/* CHAT PANEL */}
+//         {/* Chat panel */}
 //         <div
-//           className={`transition-all duration-500 ${showChat ? "w-1/4 opacity-100" : "w-0 opacity-0 pointer-events-none"
-//             } bg-slate-900 text-white shadow-2xl overflow-hidden border-l border-slate-800`}
+//           className={`transition-all duration-500 ${
+//             showChat
+//               ? "w-1/4 opacity-100"
+//               : "w-0 opacity-0 pointer-events-none"
+//           } bg-slate-900 text-white shadow-2xl overflow-hidden border-l border-slate-800`}
 //         >
 //           {showChat && (
-//             <div className="h-full w-full relative">
-//               <ChatRoot
-//                 onClose={() => setShowChat(false)}
-//                 playerId={authStorage.getUser()?.id ?? ""}
-//                 currentChunkId={
-//                   gameState?.chunk_id ?? sessionStorage.getItem("current_chunk_id") ?? null
-//                 }
-//               />
-//             </div>
+//             <ChatRoot
+//               onClose={() => setShowChat(false)}
+//               playerId={authStorage.getUser()?.id ?? ""}
+//               currentChunkId={
+//                 gameState?.chunk_id ??
+//                 sessionStorage.getItem("current_chunk_id") ??
+//                 null
+//               }
+//               // PlayerInChunk = {players}//??see how can I add it here
+//             />
 //           )}
 //         </div>
 //       </div>
 
+//       {/* Floating chat toggle */}
 //       <button
 //         onClick={() => setShowChat((prev) => !prev)}
 //         className="fixed top-6 right-6 bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-full shadow-xl transition-all z-[10000]"
@@ -404,19 +270,20 @@
 //         {showChat ? <X size={22} /> : <MessageCircle size={22} />}
 //       </button>
 
-//       <div className="fixed bottom-4 left-4 z-[9999] text-sm text-slate-300 flex items-center gap-3 bg-slate-800/70 px-3 py-2 rounded-md backdrop-blur-sm border border-slate-700/50 shadow-lg">
-//         {connected ? (
+//       {/* Notifications */}
+//       <div className="fixed bottom-4 left-4 text-sm text-slate-300 flex items-center gap-3 bg-slate-800/70 px-3 py-2 rounded-md backdrop-blur-sm border border-slate-700/50 shadow-lg">
+//         {isConnected ? (
 //           <Wifi className="text-green-400" size={16} />
 //         ) : (
-//           <Wifi className="text-red-400" size={16} />
+//           <WifiOff className="text-red-400" size={16} />
 //         )}
 //         <span>
-//           {connected ? "Connected" : "Disconnected"} • {playerCount} players
+//           {isConnected ? "Connected" : "Disconnected"} • {playerCount} players
 //         </span>
 //       </div>
 
 //       {notice && (
-//         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] bg-blue-50/90 text-blue-800 px-4 py-2 rounded-lg shadow-lg border border-blue-200">
+//         <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-blue-50/90 text-blue-800 px-4 py-2 rounded-lg shadow-lg border border-blue-200">
 //           {notice}
 //         </div>
 //       )}
@@ -424,7 +291,7 @@
 //       {showMessageInput && (
 //         <MessageInput
 //           onSubmit={(content: string) => {
-//             sendMessage({ command: "m", content });
+//             sendCommand(JSON.stringify({ command: "m", content }));
 //             setShowMessageInput(false);
 //           }}
 //           onClose={() => setShowMessageInput(false)}
@@ -432,77 +299,11 @@
 //       )}
 
 //       {currentMessage && <MessageBubble message={currentMessage} />}
-
 //       {error && (
-//         <div className="fixed top-4 right-4 bg-red-50 text-red-600 px-4 py-3 rounded-lg shadow-lg border border-red-200 animate-fade-in">
+//         <div className="fixed top-4 right-4 bg-red-50 text-red-600 px-4 py-3 rounded-lg shadow-lg border border-red-200">
 //           {error}
 //         </div>
 //       )}
-
-//       <div className="container mx-auto px-4 pb-12 mt-10">
-//         <h2 className="text-2xl font-semibold mb-6 text-center flex items-center justify-center gap-2">
-//           <Gamepad2 className="text-purple-400" />
-//           Controls
-//         </h2>
-
-//         <div className="grid md:grid-cols-2 gap-6">
-//           <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
-//             <h3 className="text-lg font-semibold mb-4 text-blue-300">Movement</h3>
-//             <div className="space-y-2 text-slate-300">
-//               <p>
-//                 <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">↑</kbd>{" "}
-//                 <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">W</kbd> Move Up
-//               </p>
-//               <p>
-//                 <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">↓</kbd>{" "}
-//                 <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">S</kbd> Move Down
-//               </p>
-//               <p>
-//                 <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">←</kbd>{" "}
-//                 <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">A</kbd> Move Left
-//               </p>
-//               <p>
-//                 <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">→</kbd>{" "}
-//                 <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">D</kbd> Move Right
-//               </p>
-//             </div>
-//           </div>
-
-//           <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
-//             <h3 className="text-lg font-semibold mb-4 text-purple-300 flex items-center gap-2">
-//               <Palette size={18} />
-//               Colors
-//             </h3>
-//             <div className="space-y-2 text-slate-300">
-//               <p>
-//                 <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">C</kbd> Cycle
-//                 Color
-//               </p>
-//               <p className="text-sm text-slate-400 mt-2">
-//                 Press C to cycle through 64 different color combinations
-//               </p>
-//             </div>
-//           </div>
-//         </div>
-
-//         <div className="grid md:grid-cols-2 gap-6 mt-6">
-//           <div className="bg-slate-800/50 p-6 rounded-xl backdrop-blur-sm border border-slate-700/50">
-//             <h3 className="text-lg font-semibold mb-4 text-purple-300 flex items-center gap-2">
-//               <MessageCircle size={18} />
-//               Messages
-//             </h3>
-//             <div className="space-y-2 text-slate-300">
-//               <p>
-//                 <kbd className="px-2 py-1 bg-slate-700 rounded text-xs">M</kbd> Write
-//                 Message
-//               </p>
-//               <p className="text-sm text-slate-400 mt-2">
-//                 Press M to leave a message at your current position
-//               </p>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
 //     </div>
 //   );
 // };
@@ -510,13 +311,12 @@
 // export default VoxelGrid;
 
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Wifi,
   WifiOff,
   Users,
   Gamepad2,
-  Palette,
   MessageCircle,
   X,
 } from "lucide-react";
@@ -524,7 +324,7 @@ import { authStorage } from "../utils/auth";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import ChatRoot from "./Chat/ChatRoot";
-import { useWebSocket } from "../hooks/useWebSocket"; // ✅ shared socket hook
+import { useWebSocket } from "../hooks/useWebSocket";
 
 interface GameState {
   w: number;
@@ -533,26 +333,34 @@ interface GameState {
   chunk_id?: string;
 }
 
+type PlayerInChunk = {
+  id: string;
+  row: number;
+  col: number;
+  // (no username from server yet, we’ll synthesize below)
+};
+
 const VoxelGrid: React.FC = () => {
-  const { isConnected, sendCommand } = useWebSocket(); // ✅ shared WebSocket
+  const { isConnected, sendCommand } = useWebSocket(); // shared socket (game + chat)
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [playerCount, setPlayerCount] = useState(0);
   const [lastAction, setLastAction] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
-  const [players, setPlayers] = useState<
-    Array<{ id: string; row: number; col: number }>
-  >([]);
+
+  const [players, setPlayers] = useState<PlayerInChunk[]>([]);
+
   const [showMessageInput, setShowMessageInput] = useState(false);
   const [currentMessage, setCurrentMessage] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // === Listen to game updates from useWebSocket ===
+  // Listen to game updates coming from useWebSocket
   useEffect(() => {
     const handleGameUpdate = (ev: CustomEvent) => {
       const data = ev.detail;
 
       if (data.type === "matrix") {
+        // world snapshot
         setGameState({
           w: data.w,
           h: data.h,
@@ -560,13 +368,17 @@ const VoxelGrid: React.FC = () => {
           chunk_id: data.chunk_id,
         });
 
+        // players in this chunk come from server payload
         const newPlayers = Array.isArray(data.players) ? data.players : [];
         setPlayers(newPlayers);
         setPlayerCount(data.total_players ?? newPlayers.length);
 
-        // track chunk
+        // track current chunk for me
         const newChunkId = String(data.chunk_id || "");
-        if (newChunkId && newChunkId !== sessionStorage.getItem("current_chunk_id")) {
+        if (
+          newChunkId &&
+          newChunkId !== sessionStorage.getItem("current_chunk_id")
+        ) {
           sessionStorage.setItem("current_chunk_id", newChunkId);
           window.dispatchEvent(new Event("chunkChanged"));
         }
@@ -580,10 +392,13 @@ const VoxelGrid: React.FC = () => {
 
     window.addEventListener("game-update", handleGameUpdate as EventListener);
     return () =>
-      window.removeEventListener("game-update", handleGameUpdate as EventListener);
+      window.removeEventListener(
+        "game-update",
+        handleGameUpdate as EventListener
+      );
   }, []);
 
-  // === Handle key presses ===
+  // send WASD/arrow/m/c to server
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
       if (!isConnected) return;
@@ -613,11 +428,12 @@ const VoxelGrid: React.FC = () => {
           action = "Moved Right";
           break;
         case "m":
+          // world scroll message mode
           setShowMessageInput(true);
           action = "Writing Message";
           break;
         case "c":
-          sendCommand("c");
+          sendCommand("c"); // color++
           action = "Color Changed";
           break;
       }
@@ -637,36 +453,42 @@ const VoxelGrid: React.FC = () => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [handleKeyPress]);
 
-  // === Render the voxel grid ===
+  // grid renderer (voxel + highlighting where players are)
   const renderGrid = () => {
     if (!gameState) return null;
 
-    const playerSet = new Set(players.map((p) => `${p.row},${p.col}`));
+    const occupied = new Set(players.map((p) => `${p.row},${p.col}`));
     const cells: JSX.Element[] = [];
 
     for (let r = 0; r < gameState.h; r++) {
       for (let c = 0; c < gameState.w; c++) {
         const i = r * gameState.w + c;
         const v = gameState.data[i];
+
         const isPlayer = (v & 1) === 1;
         const getBit = (x: number, bit: number) => (x >> bit) & 1;
         const get2 = (x: number, b0: number, b1: number) =>
           (getBit(x, b1) << 1) | getBit(x, b0);
+
         const r2 = get2(v, 2, 5);
         const g2 = get2(v, 3, 6);
         const b2 = get2(v, 4, 7);
-        const blank = !isPlayer && r2 === 0 && g2 === 0 && b2 === 0;
-        const map = [0, 85, 170, 255];
-        const color = `rgb(${map[r2]}, ${map[g2]}, ${map[b2]})`;
 
-        const isPlayersHere = playerSet.has(`${r},${c}`);
+        const blank = !isPlayer && r2 === 0 && g2 === 0 && b2 === 0;
+        const palette = [0, 85, 170, 255];
+        const color = `rgb(${palette[r2]}, ${palette[g2]}, ${palette[b2]})`;
+
+        const someoneHere = occupied.has(`${r},${c}`);
+
         cells.push(
           <div
             key={`${r}-${c}`}
-            className={`voxel-cell ${isPlayer ? "voxel-player" : "voxel-empty"}`}
+            className={`voxel-cell ${
+              isPlayer ? "voxel-player" : "voxel-empty"
+            }`}
             style={{
               backgroundColor: blank ? "transparent" : color,
-              outline: isPlayersHere
+              outline: someoneHere
                 ? "1px solid rgba(255,255,255,0.6)"
                 : "none",
             }}
@@ -677,6 +499,23 @@ const VoxelGrid: React.FC = () => {
 
     return cells;
   };
+
+  // prepare players for ChatRoot:
+  // ChatRoot expects each player = {id, row, col, username?, email?, chunk_id?}
+  const enrichedPlayers = useMemo(() => {
+    const chunkId =
+      gameState?.chunk_id ??
+      sessionStorage.getItem("current_chunk_id") ??
+      null;
+    return players.map((p) => ({
+      ...p,
+      username: p.id, // until you have real names in server, use the id
+      email: "", // optional
+      chunk_id: chunkId || "",
+    }));
+  }, [players, gameState]);
+
+  const myId = authStorage.getUser()?.id ?? "";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-x-hidden">
@@ -692,6 +531,7 @@ const VoxelGrid: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+          {/* connection status */}
           <div
             className={`flex items-center gap-2 px-4 py-2 rounded-full ${
               isConnected
@@ -705,11 +545,13 @@ const VoxelGrid: React.FC = () => {
             </span>
           </div>
 
+          {/* player count */}
           <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-300">
             <Users size={18} />
             <span className="font-medium">{playerCount} Players</span>
           </div>
 
+          {/* last action */}
           {lastAction && (
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 text-purple-300 animate-pulse">
               <Gamepad2 size={18} />
@@ -719,8 +561,9 @@ const VoxelGrid: React.FC = () => {
         </div>
       </div>
 
-      {/* Grid + Chat */}
+      {/* Grid + Chat side by side */}
       <div className="flex flex-row-reverse min-h-[60vh]">
+        {/* world grid panel */}
         <div
           className={`transition-all duration-500 ${
             showChat ? "w-3/4" : "w-full"
@@ -750,23 +593,22 @@ const VoxelGrid: React.FC = () => {
           )}
         </div>
 
-        {/* Chat panel */}
+        {/* chat panel */}
         <div
           className={`transition-all duration-500 ${
-            showChat
-              ? "w-1/4 opacity-100"
-              : "w-0 opacity-0 pointer-events-none"
+            showChat ? "w-1/4 opacity-100" : "w-0 opacity-0 pointer-events-none"
           } bg-slate-900 text-white shadow-2xl overflow-hidden border-l border-slate-800`}
         >
           {showChat && (
             <ChatRoot
               onClose={() => setShowChat(false)}
-              playerId={authStorage.getUser()?.id ?? ""}
+              playerId={myId}
               currentChunkId={
                 gameState?.chunk_id ??
                 sessionStorage.getItem("current_chunk_id") ??
                 null
               }
+              playersInChunk={enrichedPlayers}
             />
           )}
         </div>
@@ -781,7 +623,7 @@ const VoxelGrid: React.FC = () => {
         {showChat ? <X size={22} /> : <MessageCircle size={22} />}
       </button>
 
-      {/* Notifications */}
+      {/* connection + players footer bubble */}
       <div className="fixed bottom-4 left-4 text-sm text-slate-300 flex items-center gap-3 bg-slate-800/70 px-3 py-2 rounded-md backdrop-blur-sm border border-slate-700/50 shadow-lg">
         {isConnected ? (
           <Wifi className="text-green-400" size={16} />
@@ -793,15 +635,19 @@ const VoxelGrid: React.FC = () => {
         </span>
       </div>
 
+      {/* world announcement */}
       {notice && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-blue-50/90 text-blue-800 px-4 py-2 rounded-lg shadow-lg border border-blue-200">
           {notice}
         </div>
       )}
 
+      {/* world scroll composer (key 'm') */}
       {showMessageInput && (
         <MessageInput
           onSubmit={(content: string) => {
+            // For world scrolls (command "m"), we still send as game command
+            // not chat DM.
             sendCommand(JSON.stringify({ command: "m", content }));
             setShowMessageInput(false);
           }}
@@ -809,6 +655,7 @@ const VoxelGrid: React.FC = () => {
         />
       )}
 
+      {/* error HUD and ephemeral message bubble */}
       {currentMessage && <MessageBubble message={currentMessage} />}
       {error && (
         <div className="fixed top-4 right-4 bg-red-50 text-red-600 px-4 py-3 rounded-lg shadow-lg border border-red-200">
