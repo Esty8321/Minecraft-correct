@@ -426,6 +426,9 @@ function wsUrl(): string {
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
   return `${proto}//${backendHost()}:8080/game/ws`; // ✅ single endpoint for both game + chat
 }
+
+
+
 function apiBase(): string {
   const http = window.location.protocol === "https:" ? "https:" : "http:";
   return `${http}//${backendHost()}:8080/game`;//??why whithout ws??
@@ -606,7 +609,8 @@ export function useWebSocket(): UseWS {
   const sendCommand = useCallback((command: string) => {
     const ws = socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ command }));
+      const payload = typeof command === "string" ? { command } : command;
+    ws.send(JSON.stringify(payload));
   }, []);
 
   const selectPlayer = useCallback(
