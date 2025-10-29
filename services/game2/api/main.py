@@ -4,6 +4,8 @@ from typing import Any, get_args
 from fastapi import FastAPI, WebSocket
 from starlette.websockets    import WebSocketDisconnect
 
+from ..chat.chat_manager import history_between, mark_read_pair, unread_count_for
+
 from ..data.db_players import PlayerDB
 from ..data.db_chunks import ChunkDB
 from ..data.db_history import PlayerActionHistory
@@ -20,7 +22,7 @@ from ..hub.ws_utils import WebSocketUtils
 from ..hub.chunk_players import ChunkPlayers
 from ..core.settings import DATA_DIR
 
-from ..chat.chat_manager import chat_endpoint
+from ..chat.chat_manager import  handle_chat
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 logger = logging.getLogger(__name__)
@@ -83,38 +85,18 @@ async def ws_endpoint(ws: WebSocket) -> None:
     """Main WebSocket entrypoint handling both game and chat traffic."""
     await ws.accept()
     await hub.connect(ws)
-
+    
+    player = session_store.get(ws)
+    player_id = player.state.user_id if player else None
+    
+    
     try:
         while True:
-            try:
-                raw = await ws.receive_text()
+            raw = await ws.receive_text()
+            try:   
                 data = json.loads(raw)
-
                 if not isinstance(data, dict):
-                    raise ValueError("Payload must be a JSON object")
-
-                typ = (data.get("type") or "").strip().lower()
-   
-                if typ:
-                    print("I got a chat message")
-                    # Route chat messages
-                    player = session_store.get(ws)
-                    if not player:
-                        raise ValueError("No active player session for this connection")
-
-                    player_id = player.state.user_id
-                    await chat_endpoint(ws, data, player_id)
-                else:
-                    # Route game commands
-                    await _handle_command(ws, data)
-
-            except json.JSONDecodeError:
-                await WebSocketUtils.send_json(ws, {
-                    "ok": False,
-                    "type": "error",
-                    "code": "BAD_JSON",
-                    "msg": "Invalid JSON payload",
-                })
+                    raise ValueError("Payload must be a JSON object")               
             except Exception as e:
                 await WebSocketUtils.send_json(ws, {
                     "ok": False,
@@ -122,8 +104,33 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     "code": "BAD_PAYLOAD",
                     "msg": str(e),
                 })
-
+                continue
+            if player_id is None:##??dlete this condition
+                print("the player id is None but I think that it can't happen --")##???delete it??
+                
+            typ = (data.get("type") or "").strip().lower() if "type" in data else ""
+            CHAT_TYPES = {"select", "read", "typing", "react", "message", "delete"}
+            if typ in CHAT_TYPES:
+                if not player_id:
+                     await ws.send_json({"type": "error", "message": "no player session"})
+                     continue
+                await handle_chat(ws, typ, data, player_id, session_store)
+            else:
+                await _handle_command(ws, data)            
     except WebSocketDisconnect:
         print("[INFO] WebSocket disconnected cleanly")
     finally:
         await hub.disconnect(ws)
+        
+        
+@app.get("/chat/history")
+async def chat_history(me: str, with_id: str):
+    msgs = history_between(me, with_id, viewer= me)
+    changed = mark_read_pair(me, with_id)
+    unread = unread_count_for(me, with_id)
+    return{
+        "ok":True, 
+        "messages":msgs,
+        "unread_now":unread,
+        "changed":changed
+    }
