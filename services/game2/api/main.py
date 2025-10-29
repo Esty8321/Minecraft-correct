@@ -76,42 +76,59 @@ async def _handle_command(ws: WebSocket, data: IncomingMsg) -> None:
     except Exception as e:
         logger.exception("Action failed for key=%s: %s", command, e)
         await WebSocketUtils.send_json(ws, {"ok": False, "error": "action_failed", "msg": str(e)})
-   
 
+    
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket) -> None:
+    """Main WebSocket entrypoint handling both game and chat traffic."""
     await ws.accept()
-    await hub.connect(ws)  
-    try:
+    print("[GAME][WS] accepted; auth=%s", bool(ws.headers.get("authorization")))
+
+    await hub.connect(ws)
+
+    try:     
         while True:
+            try:
                 raw = await ws.receive_text()
-                try:   
-                    data = json.loads(raw)
-                    typ = (data.get("type") or "").lower()##??to see how to call it
-                    
-                    if typ:
-                        ##send to chat manager the type
-                        pass
-                        player = session_store.get(ws)
-                        player_id = player.state.user_id
-                        chat_endpoint(ws, data, player_id)##??see if we can remove the ws
-                    
-                    if not isinstance(data, dict):
-                        raise ValueError("payload must be an object")
-                except Exception as e:
-                   await WebSocketUtils.send_json(ws, {
-                        "ok": False,
-                        "type": "error",
-                        "code": "BAD_PAYLOAD",
-                        "msg": str(e),
-                    })
-                   continue
-                if not typ:
-                    await _handle_command(ws, data)   
+                data = json.loads(raw)
+
+                if not isinstance(data, dict):
+                    raise ValueError("Payload must be a JSON object")
+
+                typ = (data.get("type") or "").strip().lower()
+   
+                if typ:
+                    print("I got a chat message")
+                    # Route chat messages
+                    player = session_store.get(ws)
+                    if not player:
+                        raise ValueError("No active player session for this connection")
+
+                    player_id = player.state.user_id
+                    await chat_endpoint(ws, data, player_id)
+                else:
+                    # Route game commands
+                    await _handle_command(ws, data)
+
+            except json.JSONDecodeError:
+                await WebSocketUtils.send_json(ws, {
+                    "ok": False,
+                    "type": "error",
+                    "code": "BAD_JSON",
+                    "msg": "Invalid JSON payload",
+                })
+            except Exception as e:
+                await WebSocketUtils.send_json(ws, {
+                    "ok": False,
+                    "type": "error",
+                    "code": "BAD_PAYLOAD",
+                    "msg": str(e),
+                })
+
     except WebSocketDisconnect:
-        await hub.disconnect(ws)
         print("[INFO] WebSocket disconnected cleanly")
     finally:
-        await hub.disconnect(ws)  
+        await hub.disconnect(ws)
+
          
 

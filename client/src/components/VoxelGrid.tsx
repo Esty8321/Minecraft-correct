@@ -101,6 +101,8 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
       (window as any).ws = ws;
 
       ws.onopen = () => {
+        console.log("openned!!");
+        
         dbg("WS open");
         setConnected(true);
         try {
@@ -176,6 +178,8 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
       };
 
       ws.onerror = (e) => {
+        console.log("you have an errro!!!!!!!",e);
+        
         dbg("WS error", e);
         setConnected(false);
       };
@@ -385,7 +389,7 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
           {showChat && (
             <div className="h-full w-full relative">
               <ChatRoot
-                onClose={() => setShowChat(false)}
+                onClose={() => {console.log("connection close---");setShowChat(false)}}
                 playerId={authStorage.getUser()?.id ?? ""}
                 currentChunkId={
                   gameState?.chunk_id ?? sessionStorage.getItem("current_chunk_id") ?? null
@@ -508,3 +512,4 @@ const VoxelGrid: React.FC<VoxelGridProps> = ({ serverUrl }) => {
 };
 
 export default VoxelGrid;
+

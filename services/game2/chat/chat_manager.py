@@ -63,7 +63,7 @@ async def chat_endpoint(ws: WebSocket, typ: str, data, player_id):
 
                 await ws.send_json({"type": "react", "messageId": msg_id, "my_reaction": reaction})
                 return
-
+    
             if typ == "message":
                 text = data.get("message", "")
                 partner = data.get("selectedPlayer") or get_selected(player_id)

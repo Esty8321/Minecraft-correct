@@ -86,7 +86,7 @@ class Hub:
         if not sess:
             return
         state = sess.state
-        
+
         moved = await self.movement.apply_move(state, dr, dc)
        
         board = self.world.ensure_chunk(state.chunk_id)
