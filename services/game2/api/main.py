@@ -74,7 +74,7 @@ async def _handle_command(ws: WebSocket, data: IncomingMsg) -> None:
         elif command == "whereami":
             await hub.whereami(ws)
     except Exception as e:
-        logger.exception("Action failed for key=%s: %s", command, e)
+        print("Action failed for key=%s: %s", command, e)
         await WebSocketUtils.send_json(ws, {"ok": False, "error": "action_failed", "msg": str(e)})
 
 
@@ -127,6 +127,3 @@ async def ws_endpoint(ws: WebSocket) -> None:
         print("[INFO] WebSocket disconnected cleanly")
     finally:
         await hub.disconnect(ws)
-
-         
-

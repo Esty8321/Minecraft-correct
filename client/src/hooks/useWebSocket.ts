@@ -424,11 +424,11 @@ function backendHost(): string {
 }
 function wsUrl(): string {
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${backendHost()}:7002/ws`; // ✅ single endpoint for both game + chat
+  return `${proto}//${backendHost()}:8080/game/ws`; // ✅ single endpoint for both game + chat
 }
 function apiBase(): string {
   const http = window.location.protocol === "https:" ? "https:" : "http:";
-  return `${http}//${backendHost()}:7002`;
+  return `${http}//${backendHost()}:8080/game`;//??why whithout ws??
 }
 
 type UseWS = {

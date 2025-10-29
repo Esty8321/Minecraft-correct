@@ -102,7 +102,7 @@ class BotService:
 
     def stop(self, user_id: str) -> Optional[PlayerState]:
         ctx = self.bots.pop(user_id, None)
-        if ctx:
+        if ctx:    
             ctx.task.cancel()
             return ctx.state
         return None
