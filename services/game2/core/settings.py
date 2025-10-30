@@ -25,3 +25,17 @@ DB_PATH = DATA_DIR / "world.db"
 PLAYERS_DB_PATH = DATA_DIR / "players.db"
 SCROLLS_JSON_PATH = DATA_DIR / "message.json"##??change it to scroll_message
 HISTORY_JSON_PATH  = DATA_DIR / "history.json"
+
+
+
+CMD_UP = "up"
+CMD_DOWN = "down"
+CMD_LEFT = "left"
+CMD_RIGHT = "right"
+
+CMD_COLOR_PLUS_PLUS = "c"
+CMD_SCROLL_WRITE = "m"  
+CMD_WHEREAMI = "whereami"
+
+
+CHAT_TYPES = {"select", "read", "typing", "react", "message", "delete"}

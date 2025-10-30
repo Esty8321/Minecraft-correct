@@ -10,7 +10,6 @@ class ChunkPlayersDB:
         self.conn = sqlite3.connect(db_path, isolation_level=None)
         self.conn.execute("PRAGMA journal_mode=WAL")
 
-        # ✅ Create the updated table schema
         self.conn.execute("""
         CREATE TABLE IF NOT EXISTS chunk_players (
             chunk_id TEXT NOT NULL,
@@ -23,9 +22,7 @@ class ChunkPlayersDB:
 
         print(f"[ChunkPlayersDB] Table 'chunk_players' ensured in {db_path}")
 
-    # ---------------------------------------------------
-    # Basic DB operations
-    # ---------------------------------------------------
+ 
     def add_player(self, chunk_id: str, user_id: str, row: int, col: int):
         """Add or update player position in the DB."""
         self.conn.execute("""

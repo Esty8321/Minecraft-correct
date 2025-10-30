@@ -104,7 +104,6 @@ class ChunkPlayers:
         for key in users:
             print("the row and col",key)
             print("-----",users[key]["row"])
-            # if users[key][row]
             if users[key]["row"] == row and users[key]["col"]==col:
                 return False
         return True

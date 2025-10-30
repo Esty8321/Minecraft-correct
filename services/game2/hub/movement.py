@@ -1,4 +1,3 @@
-#V
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional, Tuple
@@ -29,8 +28,6 @@ class MovementService:
         nr, nc = state.pos.row + dr, state.pos.col + dc
         if BoardUtils.in_bounds(nr, nc):
             board = self.world.ensure_chunk(state.chunk_id)
-            # if not BoardUtils.is_empty(board, nr, nc):
-            #     return MoveResult(False)
             if not self.chunk_players.is_cell_free(state.chunk_id, nr, nc):
                 return MoveResult(False)
             await self.move_within_chunk(state, board, nr, nc)
@@ -41,8 +38,6 @@ class MovementService:
         return MoveResult(moved, old_chunk_id if moved else None)
     
     async def move_within_chunk(self, state: PlayerState, board: torch.Tensor, nr: int, nc: int) -> None:
-        # state.pos = Coord(nr, nc)
-        # self.player_db.save_position(state.user_id, state.chunk_id, state.pos.row, state.pos.col)
         board[state.pos.row, state.pos.col] = state.underlying_cell
         new_underlying = board[nr, nc].clone()
         
@@ -61,8 +56,7 @@ class MovementService:
         new_board = self.world.ensure_chunk(new_chunk_id)
         target = BoardUtils.edge_target_for_direction(state, direction)
 
-        # if not BoardUtils.is_empty(new_board, target.row, target.col):
-            # return False, old_chunk_id
+     
         if not self.chunk_players.is_cell_free(state.chunk_id, target.row, target.col):
                 return False, old_chunk_id
             

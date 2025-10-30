@@ -3,7 +3,10 @@ import logging
 from typing import Any, get_args
 from fastapi import FastAPI, WebSocket
 from starlette.websockets    import WebSocketDisconnect
-
+from ..core.settings import (
+    CMD_UP, CMD_DOWN, CMD_LEFT, CMD_RIGHT,
+    CMD_COLOR_PLUS_PLUS, CMD_SCROLL_WRITE, CMD_WHEREAMI, CHAT_TYPES, DATA_DIR
+)
 from ..data.db_players import PlayerDB
 from ..data.db_chunks import ChunkDB
 from ..data.db_history import PlayerActionHistory
@@ -18,7 +21,6 @@ from ..hub.bot import BotService
 from ..hub.color import ColorService
 from ..hub.ws_utils import WebSocketUtils
 from ..hub.chunk_players import ChunkPlayers
-from ..core.settings import DATA_DIR
 from ..data.db_chat import ChatDB
 from ..chat.chat_manager import  ChatManager
 from ..chat.messages import MessageService
@@ -53,10 +55,10 @@ chat_manager = ChatManager(session_store, world_service, message_service, chunk_
 
 
 async def _handle_move(ws: WebSocket, key) -> None:
-    if key == "up":    await hub.move(ws, -1, 0)
-    if key == "down":  await hub.move(ws, +1, 0)
-    if key == "left":  await hub.move(ws, 0, -1)
-    if key == "right": await hub.move(ws, 0, +1)
+    if key == CMD_UP:    await hub.move(ws, -1, 0)
+    if key == CMD_DOWN:  await hub.move(ws, +1, 0)
+    if key == CMD_LEFT:  await hub.move(ws, 0, -1)
+    if key == CMD_RIGHT: await hub.move(ws, 0, +1)
    
 
 async def _handle_scroll(ws: WebSocket, data: IncomingMsg) -> None:
@@ -69,19 +71,17 @@ async def _handle_scroll(ws: WebSocket, data: IncomingMsg) -> None:
 
 async def _handle_command(ws: WebSocket, data: IncomingMsg) -> None:
     command = (data.get("command") or "").lower()
-    print("the command is", command)
     try:
         if command in get_args(Direction):  
-            await _handle_move(ws, command)  # type: ignore[arg-type]
-        elif command in ("c", "color", "color++"):    
+            await _handle_move(ws, command)
+        elif command == CMD_COLOR_PLUS_PLUS:  
             await hub.color_plus_plus(ws)
             
-        elif command == "m":  ##??to see how can I change the name m to meaningfull name    
+        elif command == CMD_SCROLL_WRITE:
             await _handle_scroll(ws, data)
-        elif command == "whereami":
+        elif command == CMD_WHEREAMI:
             await hub.whereami(ws)
     except Exception as e:
-        print("Action failed for key=%s: %s", command, e)
         await WebSocketUtils.send_json(ws, {"ok": False, "error": "action_failed", "msg": str(e)})
 
 
@@ -93,8 +93,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
     
     player = session_store.get(ws)
     player_id = player.state.user_id if player else None
-    
-    
+     
     try:
         while True:
             raw = await ws.receive_text()
@@ -114,7 +113,6 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 logger.log("missing id")
                 
             typ = (data.get("type") or "").strip().lower() if "type" in data else ""
-            CHAT_TYPES = {"select", "read", "typing", "react", "message", "delete"}
             if typ in CHAT_TYPES:
                 if not player_id:
                      await ws.send_json({"type": "error", "message": "no player session"})
@@ -131,11 +129,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
 @app.get("/chat/history")
 async def chat_history(me: str, with_id: str):
     msgs = message_service.history_between(me, with_id, viewer= me)
-    # changed = message_service.mark_read_pair(me, with_id)
-    # unread = message_service.unread_count_for(me, with_id)
     return{
         "ok":True, 
         "messages":msgs,
-        # "unread_now":unread,
-        # "changed":changed
     }

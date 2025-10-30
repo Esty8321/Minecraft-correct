@@ -1,23 +1,23 @@
 from __future__ import annotations
-import asyncio, math, logging, random
-from typing import Dict, Tuple, Optional, Set
+import asyncio, logging
+from typing import Dict, Tuple, Set
 import torch
 from .types import Coord, PlayerState, Direction
 from .board_utils import BoardUtils
-from ..core.settings import W, H, DTYPE, BIT_HAS_LINK_IDX
-from ..core.bits import get_player_color_by_user_id, make_color, set_bit, get_bit
+from ..core.settings import W, H, DTYPE
+from ..core.bits import get_player_color_by_user_id
 from ..data.db_chunks import ChunkDB
 from ..data.db_players import PlayerDB
-from ..data.db_history import ActionToken, PlayerActionHistory
+from ..data.db_history import  PlayerActionHistory
 from .chunk_players import ChunkPlayers
-
 from ..core.ids import chunk_id_from_coords, coords_from_chunk_id
 
 logger = logging.getLogger(__name__)
 
 class WorldService:
     """Manages the game world, chunks, and player positions."""
-    def __init__(self, chunk_db: ChunkDB, player_db: PlayerDB, player_actions_history: PlayerActionHistory, chunk_players: ChunkPlayers) -> None:
+    def __init__(self, chunk_db: ChunkDB, player_db: PlayerDB, 
+                 player_actions_history: PlayerActionHistory, chunk_players: ChunkPlayers) -> None:
         self.chunk_db = chunk_db
         self.player_db = player_db
         self.player_actions_history = player_actions_history
@@ -88,20 +88,14 @@ class WorldService:
            async with lock:
                board = self.ensure_chunk(chunk_id)
 
-               # ✅ Only paint if the cell is empty (0 or some defined empty value)
-               if BoardUtils.is_empty(board, spawn.row, spawn.col):##??I think that I can remove this condition
-                   print("the board is empty there")
+               if BoardUtils.is_empty(board, spawn.row, spawn.col):
                    underlying = torch.zeros_like(board[spawn.row, spawn.col])
-                #    board[spawn.row, spawn.col] = torch.tensor(color, dtype=DTYPE)
                    board[spawn.row, spawn.col] = color
                 
                    self._mark_dirty(chunk_id)
                else:    
-                   print("the board isn't empty there")
-                   # Already colored → keep existing value as underlying
                    underlying = board[spawn.row, spawn.col].clone()
    
-           # Save position (no overwrite on board)
            self.player_db.save_position(user_id, chunk_id, spawn.row, spawn.col)
            
            return PlayerState(
@@ -113,14 +107,13 @@ class WorldService:
                color=color,
            )
                     
-              
-          
+                     
     async def despawn_player(self, state: PlayerState) -> None:
         """When player disconnects."""
         lock = self._lock_for(state.chunk_id)
         async with lock:
             board = self.ensure_chunk(state.chunk_id)
-            board[state.pos.row, state.pos.col] = state.underlying_cell  # restore what was under
+            board[state.pos.row, state.pos.col] = state.underlying_cell
             self._mark_dirty(state.chunk_id)
             self.chunk_db.save_chunk(state.chunk_id, board)
         self.player_db.save_position(state.user_id, state.chunk_id, state.pos.row, state.pos.col)

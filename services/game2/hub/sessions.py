@@ -67,7 +67,7 @@ class SessionStore:
          return None
 
 
-    def sockets_for_user(self, user_id: str) -> Set[WebSocket]:##check if I realy need it
+    def sockets_for_user(self, user_id: str) -> Set[WebSocket]:
         return self.by_user.get(user_id, set())
 
    

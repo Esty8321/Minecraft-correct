@@ -2,7 +2,6 @@ from __future__ import annotations
 import asyncio
 import logging
 from fastapi import WebSocket
-from collections import defaultdict
 
 from .types import MatrixPayload
 from .auth_utils import AuthUtils
@@ -35,9 +34,6 @@ class Hub:
         self.players_db = players_db
         self.chunk_players = chunk_players
         self._global_lock = asyncio.Lock()
-        
-        ##??to check if I realy need add it
-        self._user_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
                
     async def connect(self, ws: WebSocket) -> None:
         token = AuthUtils.extract_token(ws)
@@ -65,9 +61,7 @@ class Hub:
                 state = await self.world.spawn_player(user_id, chunk_id,spawn)
         
         self.sessions.add(ws, PlayerSession( state=state))
-        # if not user_sockets:
-        if True:
-            await self.scrolls.broadcast_chunk(state.chunk_id)
+        await self.scrolls.broadcast_chunk(state.chunk_id)
 
 
     async def disconnect(self, ws: WebSocket) -> None:
@@ -90,35 +84,26 @@ class Hub:
         sess = self.sessions.get(ws)
         if not sess:
             return
-        user_id = sess.state.user_id
-        async with self._user_locks[user_id]:##??check if I realy need it and why -- delete all of it after
-            state = sess.state
-            moved = await self.movement.apply_move(state, dr, dc)
-
-            board = self.world.ensure_chunk(state.chunk_id)
-            players_now = self.chunk_players.get_players_in_chunk(state.chunk_id)
-            await self.world.player_actions_history.record_player_action(state.user_id, state.chunk_id,dr,dc,board,
-                    players = [{"id": pid, "row": r, "col": c}for (pid, r, c) in players_now])
-
-            if moved.old_chunk_id and moved.old_chunk_id != state.chunk_id:
-                self.sessions.update_watchers_after_chunk_change(state.user_id, moved.old_chunk_id, state.chunk_id)
-                await self.scrolls.broadcast_chunk(state.chunk_id)
-                await self.scrolls.broadcast_chunk(moved.old_chunk_id)
-
-            else:
-                await self.scrolls.broadcast_chunk(state.chunk_id)
-            await self.scrolls.maybe_send_scroll_at(ws)
+        state = sess.state
+        moved = await self.movement.apply_move(state, dr, dc)
+        board = self.world.ensure_chunk(state.chunk_id)
+        players_now = self.chunk_players.get_players_in_chunk(state.chunk_id)
+        self.world.player_actions_history.record_player_action(state.user_id, state.chunk_id,dr,dc,board,
+                players = players_now)
+        if moved.old_chunk_id and moved.old_chunk_id != state.chunk_id:
+            self.sessions.update_watchers_after_chunk_change(state.user_id, moved.old_chunk_id, state.chunk_id)
+            await self.scrolls.broadcast_chunk(state.chunk_id)
+            await self.scrolls.broadcast_chunk(moved.old_chunk_id)
+        else:
+            await self.scrolls.broadcast_chunk(state.chunk_id)
+        await self.scrolls.maybe_send_scroll_at(ws)
         
         
     async def write_scroll(self, ws: WebSocket, content: str) -> None:
       sess = self.sessions.get(ws)
       if not sess:
           return
-      
-      user_id = sess.state.user_id
-      
-      async with self._user_locks[user_id]:##??check also it if I realy need it
-        await self.scrolls.write_scroll(ws, content)
+      await self.scrolls.write_scroll(ws, content)
     
     
     async def whereami(self, ws: WebSocket) -> None:
@@ -144,17 +129,14 @@ class Hub:
         sess = self.sessions.get(ws)
         if not sess:
             return 
+        self.color_service.color_plus_plus(sess.state)
+        await self.scrolls.broadcast_chunk(sess.state.chunk_id)
         
-        user_id = sess.state.user_id
+        board = self.world.ensure_chunk(sess.state.chunk_id)
+        self.world.player_actions_history.append_player_action(
+                    sess.state.user_id,
+                    sess.state.chunk_id,
+                    ActionToken.COLOR,
+                    board,  
+                )
         
-        async with self._user_locks[user_id]:##??check also it if we realy need it
-            self.color_service.color_plus_plus(sess.state)
-            await self.scrolls.broadcast_chunk(sess.state.chunk_id)
-
-            board = self.world.ensure_chunk(sess.state.chunk_id)
-            self.world.player_actions_history.append_player_action(
-                        sess.state.user_id,
-                        sess.state.chunk_id,
-                        ActionToken.COLOR,
-                        board,  
-                    )

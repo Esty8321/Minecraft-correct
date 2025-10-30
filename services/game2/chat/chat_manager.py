@@ -22,18 +22,14 @@ class ChatManager:
         self.messages = message_service
         self.chunk_players = chunk_players
 
-    # ----------------------------------------------
-    # partner selection
-    # ----------------------------------------------
+
     def set_selected_partner(self, me: str, other: Optional[str]) -> None:
         self._selected_partner[me] = other
 
     def get_selected_partner(self, me: str) -> Optional[str]:
         return self._selected_partner.get(me)
 
-    # ----------------------------------------------
-    # broadcast helper
-    # ----------------------------------------------
+
     async def broadcast_to_player(self, player_id: str, payload: dict) -> None:
         """
         Send a JSON payload to all sockets of a given player.
@@ -44,9 +40,7 @@ class ChatManager:
             except Exception:
                 self.session_store.pop(ws)
 
-    # ----------------------------------------------
-    # main handler
-    # ----------------------------------------------
+  
     async def handle_chat(self, ws: WebSocket, kind: str, data: dict, player_id: str):
         """
         Handle all chat WebSocket actions.
@@ -88,14 +82,11 @@ class ChatManager:
                 await ws.send_json({"type": "error", "message": "No partner selected"})
                 return
 
-            # save message to DB
             saved = self.messages.append_message(player_id, partner, text, data.get("timestamp"))
             payload = self.messages._minimal_view(saved) | {"type": "message", "sender": player_id, "to": partner}
 
-            # send to both
             await self.broadcast_to_player(partner, payload)
 
-            # send confirmation to sender
             await ws.send_json({
                 "type": "sent",
                 "to": partner,
@@ -104,7 +95,6 @@ class ChatManager:
                 "timestamp": saved["timestamp"]
             })
 
-            # log to actions history
             _, session = self.session_store.find_by_user_id(player_id)
             if not session:
                 return
@@ -112,11 +102,9 @@ class ChatManager:
                 state = session.state
                 board = self.world._chunks.get(state.chunk_id)
                 players_now = self.chunk_players.get_players_in_chunk(state.chunk_id)
-                await self.player_actions_history.record_player_action(
+                self.player_actions_history.record_player_send_message(
                     user_id=player_id,
                     chunk_id=state.chunk_id,
-                    dr=state.pos.row,
-                    dc= state.pos.col,
                     board=board,
                     players= players_now
                 )
