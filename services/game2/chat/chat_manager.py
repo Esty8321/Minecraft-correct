@@ -52,16 +52,16 @@ async def handle_chat(ws: WebSocket, kind: str, data, player_id, session_store: 
                 partner = data.get("with")
                 if partner:
                     mark_read_pair(player_id, partner)
-                    await send_to_all(player_id, {
+                    await broadcast_to_player(session_store, player_id, {
                         "type": "unread", "from": partner, "to": player_id,
                         "count": unread_count_for(player_id, partner)
                     })
                 return
 
             if kind == "typing":
-                partner = get_selected(player_id)
+                partner = get_selected_partner(player_id)
                 if partner:
-                    await send_to_all(partner, {"type": "typing", "typing": [player_id]})
+                    await broadcast_to_player(partner, {"type": "typing", "typing": [player_id]})
                 return
 
             if kind == "react":

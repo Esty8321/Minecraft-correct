@@ -6,6 +6,7 @@ import LoginForm from "./components/LoginForm";
 import RegisterForm from "./components/RegisterForm";
 import GamePage from "./components/VoxelGrid";
 import TopBar from "./components/TopBar";
+import { WebSocketProvider } from "./context/WebSocketProvider";
 
 function AuthPage() {
   const navigate = useNavigate();
@@ -75,24 +76,26 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <TopBar />
-      <Routes>
-        <Route path="/" element={<Navigate to={isAuthed ? "/game" : "/login"} replace />} />
+      <WebSocketProvider>
+        <TopBar />
+        <Routes>
+          <Route path="/" element={<Navigate to={isAuthed ? "/game" : "/login"} replace />} />
 
-        <Route path="/login" element={<AuthPage />} />
-        <Route path="/register" element={<AuthPage />} />
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="/register" element={<AuthPage />} />
 
-        <Route
-          path="/game"
-          element={
-            <PrivateRoute>
-              <GamePage />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/game"
+            element={
+              <PrivateRoute>
+                <GamePage />
+              </PrivateRoute>
+            }
+          />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </WebSocketProvider>
     </BrowserRouter>
   );
 }
