@@ -4,8 +4,6 @@ from typing import Any, get_args
 from fastapi import FastAPI, WebSocket
 from starlette.websockets    import WebSocketDisconnect
 
-from ..chat.chat_manager import history_between, mark_read_pair, unread_count_for
-
 from ..data.db_players import PlayerDB
 from ..data.db_chunks import ChunkDB
 from ..data.db_history import PlayerActionHistory
@@ -21,8 +19,10 @@ from ..hub.color import ColorService
 from ..hub.ws_utils import WebSocketUtils
 from ..hub.chunk_players import ChunkPlayers
 from ..core.settings import DATA_DIR
+from ..data.db_chat import ChatDB
+from ..chat.chat_manager import  ChatManager
+from ..chat.messages import MessageService
 
-from ..chat.chat_manager import  handle_chat
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 logger = logging.getLogger(__name__)
@@ -45,6 +45,11 @@ bot_service = BotService(world_service,movement_service,scroll_service,color_ser
 
 hub = Hub(world_service, movement_service,
           scroll_service,bot_service,session_store, color_service, player_db, chunk_players)
+
+
+chat_db = ChatDB()
+message_service = MessageService(chat_db)
+chat_manager = ChatManager(session_store, world_service, message_service, chunk_players)
 
 
 async def _handle_move(ws: WebSocket, key) -> None:
@@ -105,8 +110,8 @@ async def ws_endpoint(ws: WebSocket) -> None:
                     "msg": str(e),
                 })
                 continue
-            if player_id is None:##??dlete this condition
-                print("the player id is None but I think that it can't happen --")##???delete it??
+            if player_id is None:
+                logger.log("missing id")
                 
             typ = (data.get("type") or "").strip().lower() if "type" in data else ""
             CHAT_TYPES = {"select", "read", "typing", "react", "message", "delete"}
@@ -114,7 +119,7 @@ async def ws_endpoint(ws: WebSocket) -> None:
                 if not player_id:
                      await ws.send_json({"type": "error", "message": "no player session"})
                      continue
-                await handle_chat(ws, typ, data, player_id, session_store)
+                await chat_manager.handle_chat(ws, typ, data, player_id)
             else:
                 await _handle_command(ws, data)            
     except WebSocketDisconnect:
@@ -125,12 +130,12 @@ async def ws_endpoint(ws: WebSocket) -> None:
         
 @app.get("/chat/history")
 async def chat_history(me: str, with_id: str):
-    msgs = history_between(me, with_id, viewer= me)
-    changed = mark_read_pair(me, with_id)
-    unread = unread_count_for(me, with_id)
+    msgs = message_service.history_between(me, with_id, viewer= me)
+    # changed = message_service.mark_read_pair(me, with_id)
+    # unread = message_service.unread_count_for(me, with_id)
     return{
         "ok":True, 
         "messages":msgs,
-        "unread_now":unread,
-        "changed":changed
+        # "unread_now":unread,
+        # "changed":changed
     }

@@ -446,15 +446,10 @@ export function useWebSocket(): UseWS {
     ws.onmessage = (ev) => {
       const data: WebSocketMessage | any = JSON.parse(ev.data);
 
-      //
-      // GAME MESSAGES from server (matrix / announcement)
-      //
-      if (data.type === "matrix" || data.type === "announcement") {
-        // bubble this to VoxelGrid via DOM event
-        window.dispatchEvent(new CustomEvent("game-update", { detail: data }));
-        return;
-      }
-
+       if (data && ["matrix", "announcement", "error"].includes(data.type)) {
+          window.dispatchEvent(new CustomEvent("game-update", { detail: data }));
+          return;
+        }
       //
       // CHAT MESSAGES
       //
@@ -570,18 +565,32 @@ export function useWebSocket(): UseWS {
     };
   }, [attachQuoteIfAny, upsertMessages, setCurrentPlayerId]);
 
-  //
-  // Public API methods the UI calls
-  //
+ 
 
-  // send game command (move, color++, world scroll)
-  const sendCommand = useCallback((command: string) => {
+  // const sendCommand = useCallback(
+  //   (command: string | { command: string; [k: string]: any }) => {
+  //     const ws = socketRef.current;
+  //     if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+  //     const payload =
+  //       typeof command === "string" ? { command } : command;
+
+  //     ws.send(JSON.stringify(payload)); // ✅ שולחים את ה-payload הנכון
+  //   },
+  //   []
+  // );
+
+  const sendCommand = useCallback(
+  (command: string | { command: string; [key: string]: any }) => {
     const ws = socketRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
-    // server decides: data with {command:"up"} etc is a game action
-    ws.send(JSON.stringify({ command }));
-  }, []);
+    // ✅ עכשיו אם שולחים אובייקט הוא לא נארז שוב
+    const payload = typeof command === "string" ? { command } : command;
+    ws.send(JSON.stringify(payload));
+  },
+  []
+);
 
   // select which player I'm chatting with -> tells server "select"
   const selectPlayer = useCallback(

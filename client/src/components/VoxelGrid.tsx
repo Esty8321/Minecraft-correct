@@ -1,12 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import {
-  Wifi,
-  WifiOff,
-  Users,
-  Gamepad2,
-  MessageCircle,
-  X,
-} from "lucide-react";
+import { Wifi, WifiOff, Users, Gamepad2, MessageCircle, X } from "lucide-react";
 import { authStorage } from "../utils/auth";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
@@ -24,16 +17,58 @@ type PlayerInChunk = {
   id: string;
   row: number;
   col: number;
-  // (no username from server yet, we’ll synthesize below)
+};
+
+const SYSTEM_TREASURE = "A player hid a treasure";
+
+/** בועת ציטוט יפה להודעות מגילה שנקראות מהקרקע */
+const QuoteToast: React.FC<{ text: string; onClose: () => void }> = ({
+  text,
+  onClose,
+}) => {
+  return (
+    <div
+      className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[10001] max-w-[70vw] w-[680px] px-5 py-4
+                 bg-white/95 text-slate-800 rounded-2xl shadow-2xl border border-slate-200
+                 backdrop-blur-sm"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="mt-0.5 h-full border-l-4 border-purple-400 rounded-full"
+          aria-hidden
+        />
+        <div className="flex-1">
+          <div className="text-sm uppercase tracking-wide text-slate-500">
+            Message found here
+          </div>
+          <blockquote className="mt-1 text-lg leading-snug text-slate-900">
+            “{text}”
+          </blockquote>
+        </div>
+        <button
+          onClick={onClose}
+          className="shrink-0 inline-flex items-center justify-center rounded-full p-1
+                     hover:bg-slate-100 transition"
+          aria-label="Close"
+          title="Close"
+        >
+          <X size={18} />
+        </button>
+      </div>
+    </div>
+  );
 };
 
 const VoxelGrid: React.FC = () => {
   // const { isConnected, sendCommand } = useWebSocket(); // shared socket (game + chat)
   const {isConnected, sendCommand} = useSharedWebSocket()
+
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [playerCount, setPlayerCount] = useState(0);
   const [lastAction, setLastAction] = useState("");
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null); // system banner (e.g., treasure)
   const [showChat, setShowChat] = useState(false);
 
   const [players, setPlayers] = useState<PlayerInChunk[]>([]);
@@ -42,13 +77,21 @@ const VoxelGrid: React.FC = () => {
   const [currentMessage, setCurrentMessage] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Listen to game updates coming from useWebSocket
+  // הצגת בועת ציטוט יפה להודעות מגילה
+  const [quoteText, setQuoteText] = useState<string | null>(null);
+  // סגירה אוטומטית אחרי 6 שניות
+  useEffect(() => {
+    if (!quoteText) return;
+    const t = setTimeout(() => setQuoteText(null), 6000);
+    return () => clearTimeout(t);
+  }, [quoteText]);
+
+  // === Listen to game updates from useWebSocket ===
   useEffect(() => {
     const handleGameUpdate = (ev: CustomEvent) => {
       const data = ev.detail;
 
       if (data.type === "matrix") {
-        // world snapshot
         setGameState({
           w: data.w,
           h: data.h,
@@ -56,37 +99,48 @@ const VoxelGrid: React.FC = () => {
           chunk_id: data.chunk_id,
         });
 
-        // players in this chunk come from server payload
         const newPlayers = Array.isArray(data.players) ? data.players : [];
         setPlayers(newPlayers);
         setPlayerCount(data.total_players ?? newPlayers.length);
 
-        // track current chunk for me
         const newChunkId = String(data.chunk_id || "");
-        if (
-          newChunkId &&
-          newChunkId !== sessionStorage.getItem("current_chunk_id")
-        ) {
+        if (newChunkId && newChunkId !== sessionStorage.getItem("current_chunk_id")) {
           sessionStorage.setItem("current_chunk_id", newChunkId);
           window.dispatchEvent(new Event("chunkChanged"));
         }
       }
 
       if (data.type === "announcement" && data.data?.text) {
-        setNotice(String(data.data.text));
-        setTimeout(() => setNotice(null), 3000);
+        const text = String(data.data.text);
+
+        if (text === SYSTEM_TREASURE) {
+          // הודעת מערכת: שחקן החביא מטמון → באנר כחול למעלה
+          setNotice(text);
+          setTimeout(() => setNotice(null), 3000);
+        } else {
+          // הודעת מגילה–תוכן: מציגים בבועת ציטוט
+          setQuoteText(text);
+        }
+      }
+
+      // טיפול בשגיאות (למשבצת תפוסה וכו')
+      if (data.type === "error") {
+        if (data.code === "SPACE_OCCUPIED") {
+          setError("You can't leave a message here — this spot is already taken.");
+        } else {
+          setError(String(data.message || "An error occurred."));
+        }
+        setShowMessageInput(false);
+        setTimeout(() => setError(null), 3000);
       }
     };
 
     window.addEventListener("game-update", handleGameUpdate as EventListener);
     return () =>
-      window.removeEventListener(
-        "game-update",
-        handleGameUpdate as EventListener
-      );
+      window.removeEventListener("game-update", handleGameUpdate as EventListener);
   }, []);
 
-  // send WASD/arrow/m/c to server
+  // === Handle key presses ===
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
       if (!isConnected) return;
@@ -116,7 +170,6 @@ const VoxelGrid: React.FC = () => {
           action = "Moved Right";
           break;
         case "m":
-          // world scroll message mode
           setShowMessageInput(true);
           action = "Writing Message";
           break;
@@ -141,44 +194,36 @@ const VoxelGrid: React.FC = () => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [handleKeyPress]);
 
-  // grid renderer (voxel + highlighting where players are)
+  // === Render the voxel grid ===
   const renderGrid = () => {
     if (!gameState) return null;
 
-    const occupied = new Set(players.map((p) => `${p.row},${p.col}`));
+    const playerSet = new Set(players.map((p) => `${p.row},${p.col}`));
     const cells: JSX.Element[] = [];
 
     for (let r = 0; r < gameState.h; r++) {
       for (let c = 0; c < gameState.w; c++) {
         const i = r * gameState.w + c;
         const v = gameState.data[i];
-
         const isPlayer = (v & 1) === 1;
         const getBit = (x: number, bit: number) => (x >> bit) & 1;
         const get2 = (x: number, b0: number, b1: number) =>
           (getBit(x, b1) << 1) | getBit(x, b0);
-
         const r2 = get2(v, 2, 5);
         const g2 = get2(v, 3, 6);
         const b2 = get2(v, 4, 7);
-
         const blank = !isPlayer && r2 === 0 && g2 === 0 && b2 === 0;
-        const palette = [0, 85, 170, 255];
-        const color = `rgb(${palette[r2]}, ${palette[g2]}, ${palette[b2]})`;
+        const map = [0, 85, 170, 255];
+        const color = `rgb(${map[r2]}, ${map[g2]}, ${map[b2]})`;
 
-        const someoneHere = occupied.has(`${r},${c}`);
-
+        const isPlayersHere = playerSet.has(`${r},${c}`);
         cells.push(
           <div
             key={`${r}-${c}`}
-            className={`voxel-cell ${
-              isPlayer ? "voxel-player" : "voxel-empty"
-            }`}
+            className={`voxel-cell ${isPlayer ? "voxel-player" : "voxel-empty"}`}
             style={{
               backgroundColor: blank ? "transparent" : color,
-              outline: someoneHere
-                ? "1px solid rgba(255,255,255,0.6)"
-                : "none",
+              outline: isPlayersHere ? "1px solid rgba(255,255,255,0.6)" : "none",
             }}
           />
         );
@@ -188,17 +233,14 @@ const VoxelGrid: React.FC = () => {
     return cells;
   };
 
-  // prepare players for ChatRoot:
-  // ChatRoot expects each player = {id, row, col, username?, email?, chunk_id?}
+  // הכנה ל-ChatRoot
   const enrichedPlayers = useMemo(() => {
     const chunkId =
-      gameState?.chunk_id ??
-      sessionStorage.getItem("current_chunk_id") ??
-      null;
+      gameState?.chunk_id ?? sessionStorage.getItem("current_chunk_id") ?? null;
     return players.map((p) => ({
       ...p,
-      username: p.id, // until you have real names in server, use the id
-      email: "", // optional
+      username: p.id,
+      email: "",
       chunk_id: chunkId || "",
     }));
   }, [players, gameState]);
@@ -222,9 +264,7 @@ const VoxelGrid: React.FC = () => {
           {/* connection status */}
           <div
             className={`flex items-center gap-2 px-4 py-2 rounded-full ${
-              isConnected
-                ? "bg-green-500/20 text-green-300"
-                : "bg-red-500/20 text-red-300"
+              isConnected ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"
             }`}
           >
             {isConnected ? <Wifi size={18} /> : <WifiOff size={18} />}
@@ -249,9 +289,9 @@ const VoxelGrid: React.FC = () => {
         </div>
       </div>
 
-      {/* Grid + Chat side by side */}
+      {/* Grid + Chat */}
       <div className="flex flex-row-reverse min-h-[60vh]">
-        {/* world grid panel */}
+        {/* World grid */}
         <div
           className={`transition-all duration-500 ${
             showChat ? "w-3/4" : "w-full"
@@ -281,7 +321,7 @@ const VoxelGrid: React.FC = () => {
           )}
         </div>
 
-        {/* chat panel */}
+        {/* Chat panel */}
         <div
           className={`transition-all duration-500 ${
             showChat ? "w-1/4 opacity-100" : "w-0 opacity-0 pointer-events-none"
@@ -292,9 +332,7 @@ const VoxelGrid: React.FC = () => {
               onClose={() => setShowChat(false)}
               playerId={myId}
               currentChunkId={
-                gameState?.chunk_id ??
-                sessionStorage.getItem("current_chunk_id") ??
-                null
+                gameState?.chunk_id ?? sessionStorage.getItem("current_chunk_id") ?? null
               }
               playersInChunk={enrichedPlayers}
             />
@@ -311,7 +349,7 @@ const VoxelGrid: React.FC = () => {
         {showChat ? <X size={22} /> : <MessageCircle size={22} />}
       </button>
 
-      {/* connection + players footer bubble */}
+      {/* Bottom-left status bubble */}
       <div className="fixed bottom-4 left-4 text-sm text-slate-300 flex items-center gap-3 bg-slate-800/70 px-3 py-2 rounded-md backdrop-blur-sm border border-slate-700/50 shadow-lg">
         {isConnected ? (
           <Wifi className="text-green-400" size={16} />
@@ -323,27 +361,29 @@ const VoxelGrid: React.FC = () => {
         </span>
       </div>
 
-      {/* world announcement */}
+      {/* Top banner for system announcement (treasure) */}
       {notice && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-blue-50/90 text-blue-800 px-4 py-2 rounded-lg shadow-lg border border-blue-200">
           {notice}
         </div>
       )}
 
-      {/* world scroll composer (key 'm') */}
+      {/* Fancy quote toast for scroll content */}
+      {quoteText && <QuoteToast text={quoteText} onClose={() => setQuoteText(null)} />}
+
+      {/* Composer for world scroll (key 'm') */}
       {showMessageInput && (
         <MessageInput
           onSubmit={(content: string) => {
-            // For world scrolls (command "m"), we still send as game command
-            // not chat DM.
-            sendCommand(JSON.stringify({ command: "m", content }));
+            // שולחים אובייקט, לא מחרוזת JSON
+            sendCommand({ command: "m", content});
             setShowMessageInput(false);
           }}
           onClose={() => setShowMessageInput(false)}
         />
       )}
 
-      {/* error HUD and ephemeral message bubble */}
+      {/* extras */}
       {currentMessage && <MessageBubble message={currentMessage} />}
       {error && (
         <div className="fixed top-4 right-4 bg-red-50 text-red-600 px-4 py-3 rounded-lg shadow-lg border border-red-200">
