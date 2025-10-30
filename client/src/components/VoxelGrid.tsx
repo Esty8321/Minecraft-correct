@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { Wifi, WifiOff, Users, Gamepad2, MessageCircle, X } from "lucide-react";
+import { Wifi, WifiOff, Users, Gamepad2, MessageCircle, X, HelpCircle } from "lucide-react";
 import { authStorage } from "../utils/auth";
 import { MessageBubble } from "./MessageBubble";
 import { MessageInput } from "./MessageInput";
 import ChatRoot from "./Chat/ChatRoot";
-// import { useWebSocket } from "../hooks/useWebSocket";
+import { InstructionsModal } from "./InstructionsModal";
 import { useSharedWebSocket } from "../context/WebSocketProvider";
+
 interface GameState {
   w: number;
   h: number;
@@ -21,7 +22,6 @@ type PlayerInChunk = {
 
 const SYSTEM_TREASURE = "A player hid a treasure";
 
-/** בועת ציטוט יפה להודעות מגילה שנקראות מהקרקע */
 const QuoteToast: React.FC<{ text: string; onClose: () => void }> = ({
   text,
   onClose,
@@ -44,7 +44,7 @@ const QuoteToast: React.FC<{ text: string; onClose: () => void }> = ({
             Message found here
           </div>
           <blockquote className="mt-1 text-lg leading-snug text-slate-900">
-            “{text}”
+            "{text}"
           </blockquote>
         </div>
         <button
@@ -62,14 +62,14 @@ const QuoteToast: React.FC<{ text: string; onClose: () => void }> = ({
 };
 
 const VoxelGrid: React.FC = () => {
-  // const { isConnected, sendCommand } = useWebSocket(); // shared socket (game + chat)
   const {isConnected, sendCommand} = useSharedWebSocket()
 
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [playerCount, setPlayerCount] = useState(0);
   const [lastAction, setLastAction] = useState("");
-  const [notice, setNotice] = useState<string | null>(null); // system banner (e.g., treasure)
+  const [notice, setNotice] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   const [players, setPlayers] = useState<PlayerInChunk[]>([]);
 
@@ -77,16 +77,14 @@ const VoxelGrid: React.FC = () => {
   const [currentMessage, setCurrentMessage] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // הצגת בועת ציטוט יפה להודעות מגילה
   const [quoteText, setQuoteText] = useState<string | null>(null);
-  // סגירה אוטומטית אחרי 6 שניות
+
   useEffect(() => {
     if (!quoteText) return;
     const t = setTimeout(() => setQuoteText(null), 6000);
     return () => clearTimeout(t);
   }, [quoteText]);
 
-  // === Listen to game updates from useWebSocket ===
   useEffect(() => {
     const handleGameUpdate = (ev: CustomEvent) => {
       const data = ev.detail;
@@ -114,16 +112,13 @@ const VoxelGrid: React.FC = () => {
         const text = String(data.data.text);
 
         if (text === SYSTEM_TREASURE) {
-          // הודעת מערכת: שחקן החביא מטמון → באנר כחול למעלה
           setNotice(text);
           setTimeout(() => setNotice(null), 3000);
         } else {
-          // הודעת מגילה–תוכן: מציגים בבועת ציטוט
           setQuoteText(text);
         }
       }
 
-      // טיפול בשגיאות (למשבצת תפוסה וכו')
       if (data.type === "error") {
         if (data.code === "SPACE_OCCUPIED") {
           setError("You can't leave a message here — this spot is already taken.");
@@ -140,10 +135,15 @@ const VoxelGrid: React.FC = () => {
       window.removeEventListener("game-update", handleGameUpdate as EventListener);
   }, []);
 
-  // === Handle key presses ===
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
       if (!isConnected) return;
+
+      const target = event.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || target?.isContentEditable) {
+        return;
+      }
 
       const key = event.key.toLowerCase();
       let action = "";
@@ -174,7 +174,7 @@ const VoxelGrid: React.FC = () => {
           action = "Writing Message";
           break;
         case "c":
-          sendCommand("c"); // color++
+          sendCommand("c");
           action = "Color Changed";
           break;
       }
@@ -194,7 +194,6 @@ const VoxelGrid: React.FC = () => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [handleKeyPress]);
 
-  // === Render the voxel grid ===
   const renderGrid = () => {
     if (!gameState) return null;
 
@@ -233,7 +232,6 @@ const VoxelGrid: React.FC = () => {
     return cells;
   };
 
-  // הכנה ל-ChatRoot
   const enrichedPlayers = useMemo(() => {
     const chunkId =
       gameState?.chunk_id ?? sessionStorage.getItem("current_chunk_id") ?? null;
@@ -249,7 +247,6 @@ const VoxelGrid: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-x-hidden">
-      {/* Header */}
       <div className="container mx-auto px-4 pt-8">
         <div className="text-center mb-6">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
@@ -261,7 +258,6 @@ const VoxelGrid: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
-          {/* connection status */}
           <div
             className={`flex items-center gap-2 px-4 py-2 rounded-full ${
               isConnected ? "bg-green-500/20 text-green-300" : "bg-red-500/20 text-red-300"
@@ -273,13 +269,20 @@ const VoxelGrid: React.FC = () => {
             </span>
           </div>
 
-          {/* player count */}
           <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-300">
             <Users size={18} />
             <span className="font-medium">{playerCount} Players</span>
           </div>
 
-          {/* last action */}
+          <button
+            onClick={() => setShowInstructions(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 text-amber-300
+                     hover:bg-amber-500/30 transition-all duration-200 transform hover:scale-105"
+          >
+            <HelpCircle size={18} />
+            <span className="font-medium">How to Play</span>
+          </button>
+
           {lastAction && (
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/20 text-purple-300 animate-pulse">
               <Gamepad2 size={18} />
@@ -289,9 +292,7 @@ const VoxelGrid: React.FC = () => {
         </div>
       </div>
 
-      {/* Grid + Chat */}
       <div className="flex flex-row-reverse min-h-[60vh]">
-        {/* World grid */}
         <div
           className={`transition-all duration-500 ${
             showChat ? "w-3/4" : "w-full"
@@ -321,7 +322,6 @@ const VoxelGrid: React.FC = () => {
           )}
         </div>
 
-        {/* Chat panel */}
         <div
           className={`transition-all duration-500 ${
             showChat ? "w-1/4 opacity-100" : "w-0 opacity-0 pointer-events-none"
@@ -340,7 +340,6 @@ const VoxelGrid: React.FC = () => {
         </div>
       </div>
 
-      {/* Floating chat toggle */}
       <button
         onClick={() => setShowChat((prev) => !prev)}
         className="fixed top-6 right-6 bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-full shadow-xl transition-all z-[10000]"
@@ -349,7 +348,6 @@ const VoxelGrid: React.FC = () => {
         {showChat ? <X size={22} /> : <MessageCircle size={22} />}
       </button>
 
-      {/* Bottom-left status bubble */}
       <div className="fixed bottom-4 left-4 text-sm text-slate-300 flex items-center gap-3 bg-slate-800/70 px-3 py-2 rounded-md backdrop-blur-sm border border-slate-700/50 shadow-lg">
         {isConnected ? (
           <Wifi className="text-green-400" size={16} />
@@ -361,21 +359,17 @@ const VoxelGrid: React.FC = () => {
         </span>
       </div>
 
-      {/* Top banner for system announcement (treasure) */}
       {notice && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-blue-50/90 text-blue-800 px-4 py-2 rounded-lg shadow-lg border border-blue-200">
           {notice}
         </div>
       )}
 
-      {/* Fancy quote toast for scroll content */}
       {quoteText && <QuoteToast text={quoteText} onClose={() => setQuoteText(null)} />}
 
-      {/* Composer for world scroll (key 'm') */}
       {showMessageInput && (
         <MessageInput
           onSubmit={(content: string) => {
-            // שולחים אובייקט, לא מחרוזת JSON
             sendCommand({ command: "m", content});
             setShowMessageInput(false);
           }}
@@ -383,7 +377,10 @@ const VoxelGrid: React.FC = () => {
         />
       )}
 
-      {/* extras */}
+      {showInstructions && (
+        <InstructionsModal onClose={() => setShowInstructions(false)} />
+      )}
+
       {currentMessage && <MessageBubble message={currentMessage} />}
       {error && (
         <div className="fixed top-4 right-4 bg-red-50 text-red-600 px-4 py-3 rounded-lg shadow-lg border border-red-200">
