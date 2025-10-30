@@ -154,7 +154,9 @@
           "message": "n ht ith you?",
           "timestamp": "2025-10-30T06:32:48.672Z",
           "quoted_id": null,
-          "reactions": {},
+          "reactions": {
+            "00000000": "down"
+          },
           "read_by": [
             "00000100",
             "00000000"
@@ -268,6 +270,151 @@
           "quoted_id": null,
           "reactions": {},
           "read_by": [
+            "00000100",
+            "00000000"
+          ],
+          "deleted": false,
+          "origin": null,
+          "model": null
+        },
+        {
+          "id": "2025-10-30T07:33:01.739Z|00000100|yo",
+          "from": "00000100",
+          "to": "00000000",
+          "message": "yo",
+          "timestamp": "2025-10-30T07:33:01.739Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000100",
+            "00000000"
+          ],
+          "deleted": false,
+          "origin": null,
+          "model": null
+        },
+        {
+          "id": "2025-10-30T07:34:30.202Z|00000100|oloo",
+          "from": "00000100",
+          "to": "00000000",
+          "message": "oloo",
+          "timestamp": "2025-10-30T07:34:30.202Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000100",
+            "00000000"
+          ],
+          "deleted": false,
+          "origin": null,
+          "model": null
+        },
+        {
+          "id": "2025-10-30T07:35:50.721Z|00000100|hi",
+          "from": "00000100",
+          "to": "00000000",
+          "message": "hi",
+          "timestamp": "2025-10-30T07:35:50.721Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000100",
+            "00000000"
+          ],
+          "deleted": false,
+          "origin": null,
+          "model": null
+        },
+        {
+          "id": "2025-10-30T07:38:21.048Z|00000100|hhh",
+          "from": "00000100",
+          "to": "00000000",
+          "message": "hhh",
+          "timestamp": "2025-10-30T07:38:21.048Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000100",
+            "00000000"
+          ],
+          "deleted": false,
+          "origin": null,
+          "model": null
+        },
+        {
+          "id": "2025-10-30T07:39:36.987Z|00000000|jjj",
+          "from": "00000000",
+          "to": "00000100",
+          "message": "jjj",
+          "timestamp": "2025-10-30T07:39:36.987Z",
+          "quoted_id": "2025-10-30T07:27:42.278Z|00000100|ht",
+          "reactions": {},
+          "read_by": [
+            "00000000",
+            "00000100"
+          ],
+          "deleted": false,
+          "origin": null,
+          "model": null
+        },
+        {
+          "id": "2025-10-30T07:50:46.420Z|00000100|ok",
+          "from": "00000100",
+          "to": "00000000",
+          "message": "ok",
+          "timestamp": "2025-10-30T07:50:46.420Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000100",
+            "00000000"
+          ],
+          "deleted": false,
+          "origin": null,
+          "model": null
+        },
+        {
+          "id": "2025-10-30T07:51:00.907Z|00000000|let' try it",
+          "from": "00000000",
+          "to": "00000100",
+          "message": "let' try it",
+          "timestamp": "2025-10-30T07:51:00.907Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000000",
+            "00000100"
+          ],
+          "deleted": false,
+          "origin": null,
+          "model": null
+        },
+        {
+          "id": "2025-10-30T07:57:14.570Z|00000100|fefe",
+          "from": "00000100",
+          "to": "00000000",
+          "message": "fefe",
+          "timestamp": "2025-10-30T07:57:14.570Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000100",
+            "00000000"
+          ],
+          "deleted": false,
+          "origin": null,
+          "model": null
+        },
+        {
+          "id": "2025-10-30T07:58:55.290Z|00000010|okey , love you",
+          "from": "00000010",
+          "to": "00000100",
+          "message": "okey , love you",
+          "timestamp": "2025-10-30T07:58:55.290Z",
+          "quoted_id": null,
+          "reactions": {},
+          "read_by": [
+            "00000010",
             "00000100"
           ],
           "deleted": false,

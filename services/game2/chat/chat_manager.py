@@ -42,7 +42,7 @@ async def handle_chat(ws: WebSocket, kind: str, data, player_id, session_store: 
                     msgs = history_between(player_id, partner, viewer=player_id)
                     await ws.send_json({"type": "history", "with": partner, "messages": msgs})
                     if mark_read_pair(player_id, partner):
-                        await broadcast_to_player(player_id, {
+                        await broadcast_to_player(session_store, player_id, {
                             "type": "unread", "from": partner, "to": player_id,
                             "count": unread_count_for(player_id, partner)
                         })
