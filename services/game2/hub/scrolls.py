@@ -106,19 +106,15 @@ class ScrollService:
             position=(state.pos.row, state.pos.col),
         )
 
-        # ⬅️ שמירה אסינכרונית (חשוב!)
         await self.scroll_db.save_scroll(scroll)
 
-        # הדלקת ביט "יש הודעה" גם בתא הגלוי וגם ב-underlying
         board[state.pos.row, state.pos.col] = set_bit(
             board[state.pos.row, state.pos.col], BIT_HAS_LINK_IDX, True
         )
         state.underlying_cell = set_bit(state.underlying_cell, BIT_HAS_LINK_IDX, True)
 
-        # שמירת המטריצה המעודכנת
         self.chunk_db.save_chunk(state.chunk_id, board)
 
-        # ⬅️ רישום היסטוריה של פעולה (DM=drop message, לפי ההגדרות שלך)
         try:
             self.player_action_history.append_player_action(
                 sess.state.user_id,
@@ -129,10 +125,8 @@ class ScrollService:
         except Exception as e:
             logger.warning("Failed to append history: %s", e)
 
-        # שדר לכל מי שצופה בצ׳אנק את המטריצה המעודכנת
         await self.broadcast_chunk(state.chunk_id)
 
-        # וגם נוטיפיקציה כללית "שחקן החביא מטמון"
         notice = {"type": "announcement", "data": {"text": "A player hid a treasure"}}
         for target_ws in list(self.sessions.watchers(state.chunk_id)):
             await WebSocketUtils.send_json(target_ws, notice)

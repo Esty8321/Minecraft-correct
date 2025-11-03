@@ -2,53 +2,13 @@
   "users": [
     {
       "id": "00000000",
-      "username": "Esther",
-      "email": "m025863821@gmail.com"
-    },
-    {
-      "id": "00000001",
-      "username": "Avremi",
-      "email": "b0527643823@gmail.com"
-    },
-    {
-      "id": "00000010",
-      "username": "adina",
-      "email": "a@gmail.com"
-    },
-    {
-      "id": "00000011",
-      "username": "Shira",
-      "email": "tamar48719@gmail.com"
-    },
-    {
-      "id": "00000100",
       "username": "AAA",
       "email": "AAA@gmail.com"
     },
     {
-      "id": "00000101",
+      "id": "00000001",
       "username": "BBB",
       "email": "BBB@gmail.com"
-    },
-    {
-      "id": "00000110",
-      "username": "Chaim",
-      "email": "m025863821@gamil.com"
-    },
-    {
-      "id": "00000111",
-      "username": "Efi",
-      "email": "efi@gmail.com"
-    },
-    {
-      "id": "00001000",
-      "username": "CCC",
-      "email": "CCC@gmail.com"
-    },
-    {
-      "id": "00001001",
-      "username": "teacher",
-      "email": "m025863821@gamil.c"
     }
   ]
 }
