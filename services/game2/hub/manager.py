@@ -93,7 +93,7 @@ class Hub:
             return
         state = sess.state
         moved = await self.movement.apply_move(state, dr, dc)
-        print(f"[BOT] move {dr},{dc} => moved={moved}")
+        # print(f"[BOT] move {dr},{dc} => moved={moved}")
 
         board = self.world.ensure_chunk(state.chunk_id)
         players_now = self.chunk_players.get_players_in_chunk(state.chunk_id)
