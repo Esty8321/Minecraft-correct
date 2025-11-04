@@ -15,6 +15,7 @@ class ActionToken(IntEnum):
     DOWN = 4
     COLOR = 5
     DM = 6
+    SLEEP = 7
     
 @dataclass(frozen=True)
 class Coord:
