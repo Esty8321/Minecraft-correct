@@ -3,7 +3,7 @@ import logging
 from typing import Optional, Tuple
 from fastapi import WebSocket
 from jose import jwt, JWTError
-
+   
 logger = logging.getLogger(__name__)
 JWT_SECRET = os.getenv("AUTH_JWT_SECRET", "CHANGE_ME_123456789")
 JWT_ALG = os.getenv("JWT_ALG", "HS256")

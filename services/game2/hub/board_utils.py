@@ -2,7 +2,6 @@ from __future__ import annotations
 import random
 import torch
 from ..core.settings import W, H
-from ..core.bits import get_bit
 from .types import Coord, PlayerState, Direction
 
 class BoardUtils:
@@ -44,5 +43,4 @@ class BoardUtils:
             r, c = random.randrange(H), random.randrange(W)
             if BoardUtils.is_empty(board, r, c):
                 return Coord(r, c)
-        # fallback center
         return Coord(H // 2, W // 2)

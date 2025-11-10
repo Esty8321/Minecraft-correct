@@ -1,5 +1,4 @@
 """Low-level bit manipulation utilities for encoding game board cells (colors, flags, etc.)."""
-
 import hashlib
 import torch
 from typing import Tuple
@@ -8,7 +7,6 @@ from .settings import (
 
     BIT_IS_PLAYER_IDX, BIT_R0_IDX, BIT_R1_IDX, BIT_G0_IDX, BIT_G1_IDX, BIT_B0_IDX, BIT_B1_IDX, BIT_HAS_LINK_IDX
 )
-
 
 def set_bit(v: torch.Tensor, bit: int, one: bool) -> torch.Tensor:
     """Set/Clear single bit on an 8-bit tensor value."""

@@ -18,3 +18,4 @@ class ScrollMessage:
             "position": self.position,
             "timestamp": self.timestamp,
         }
+

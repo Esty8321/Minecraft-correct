@@ -42,15 +42,23 @@ class PlayerActionHistory:
             "chunk_id": chunk_id,
             "token": int(token),
             "snapshot_path": str(snapshot_path),
-            "players": players or [],##??don't forget to pass the players??realy do it??
+            "players": players or [],
         }
         
         self.log_file.parent.mkdir(parents= True, exist_ok= True)
         with open(self.log_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
             
+    
+    def record_player_send_message(self, user_id:str,chunk_id: str, board: torch.Tensor, players):
+        token = ActionToken.DM
+        try:
+            self.append_player_action(user_id, chunk_id, token, board, players)
+        except Exception as e:
+             print(f"[WARN] Failed to record send message for {user_id}: {e}")
+    
             
-    async def record_player_action(self, user_id: str,
+    def record_player_action(self, user_id: str,
                                     chunk_id: str, dr: int, dc: int, board: torch.Tensor, players): 
         token = MOVE_TOKENS.get((dr, dc))
         if not token:

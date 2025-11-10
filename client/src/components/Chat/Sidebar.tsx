@@ -9,7 +9,6 @@ interface SidebarProps {
   currentPlayerId: string;
   unreadCounts?: Record<string, number>;
   onMarkRead?: (playerId: string) => void;
-  /** id של השחקן הקרוב ביותר (לא אני) */
   nearestPlayerId?: string;
 }
 
@@ -24,7 +23,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [toast, setToast] = useState<string | null>(null);
 
-  // העלם אוטומטי אחרי 2 שניות
   useEffect(() => {
     if (toast) {
       const t = setTimeout(() => setToast(null), 2000);
@@ -32,7 +30,6 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   }, [toast]);
 
-  // ✅ לא מציגים את עצמי ברשימת השחקנים
   const list = activePlayers.filter(p => p.id !== currentPlayerId);
 
   return (
@@ -50,7 +47,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           list.map((p) => {
             const isSelected = selectedPlayer?.id === p.id;
-            const isMe = currentPlayerId === p.id; // נשאר כדגל הגנתי בלבד (תמיד false בגלל הסינון)
+            const isMe = currentPlayerId === p.id; 
             const isNearest = nearestPlayerId === p.id;
             const unread = unreadCounts?.[p.id] ?? 0;
 
@@ -58,12 +55,10 @@ const Sidebar: React.FC<SidebarProps> = ({
               <div
                 key={p.id}
                 onClick={() => {
-                  // ⛔ לא מאפשרים לפתוח צ'אט עם עצמי (הגנה כפולה)
                   if (isMe) {
                     setToast("❌ You can't chat with yourself");
                     return;
                   }
-                  // ✅ רק עם השחקן הקרוב ביותר מותר לפתוח צ'אט
                   if (!isNearest) {
                     setToast('💬 You can only chat with the nearest player');
                     return;

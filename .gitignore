@@ -60,3 +60,4 @@ bot_gru/
 # === Explicitly track service data folder ===
 # =========================================
 !services/game2/data/
+

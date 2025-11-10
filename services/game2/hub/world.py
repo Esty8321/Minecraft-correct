@@ -1,26 +1,27 @@
 from __future__ import annotations
-import asyncio, math, logging, random
-from typing import Dict, Tuple, Optional, Set
+import asyncio, logging
+from typing import Dict, Tuple, Set
 import torch
 from .types import Coord, PlayerState, Direction
 from .board_utils import BoardUtils
-from ..core.settings import W, H, DTYPE, BIT_HAS_LINK_IDX
-from ..core.bits import get_player_color_by_user_id, make_color, set_bit, get_bit
+from ..core.settings import W, H, DTYPE, BIT_FRUIT_IDX
+from ..core.bits import get_bit
 from ..data.db_chunks import ChunkDB
 from ..data.db_players import PlayerDB
-from ..data.db_history import ActionToken, PlayerActionHistory
+from ..data.user_logs import UserActionLogger
 from .chunk_players import ChunkPlayers
-
 from ..core.ids import chunk_id_from_coords, coords_from_chunk_id
+import random
 
 logger = logging.getLogger(__name__)
 
 class WorldService:
     """Manages the game world, chunks, and player positions."""
-    def __init__(self, chunk_db: ChunkDB, player_db: PlayerDB, player_actions_history: PlayerActionHistory, chunk_players: ChunkPlayers) -> None:
+    def __init__(self, chunk_db: ChunkDB, player_db: PlayerDB, 
+                 user_logs: UserActionLogger, chunk_players: ChunkPlayers) -> None:
         self.chunk_db = chunk_db
         self.player_db = player_db
-        self.player_actions_history = player_actions_history
+        self.user_logs = user_logs
 
 
         self._chunks: Dict[str, torch.Tensor] = {}
@@ -39,7 +40,7 @@ class WorldService:
         return self._chunk_locks[chunk_id]
 
     def _mark_dirty(self, chunk_id: str) -> None:
-        self._dirty.add(chunk_id)
+        self._dirty.add(chunk_id)  
 
     def ensure_chunk(self, chunk_id: str) -> torch.Tensor:
         """Ensure chunk is loaded or create a new one."""
@@ -47,12 +48,36 @@ class WorldService:
             return self._chunks[chunk_id]
         try:
             board = self.chunk_db.load_chunk(chunk_id)
+            is_new = False
         except FileNotFoundError:
             board = torch.zeros((H, W), dtype=DTYPE)
-            self.chunk_db.save_chunk(chunk_id, board)
+            is_new = True
+                    
         self._chunks[chunk_id] = board
+        if is_new:
+            self._scatter_fruits(chunk_id, board)
         return board
 
+
+    
+    def _scatter_fruits(self, chunk_id: str, board: torch.Tensor):
+       import random
+
+       FRUIT_COUNT = 5
+       placed = 0
+       
+       FRUIT_VALUE = 2 ** BIT_FRUIT_IDX
+
+       while placed < FRUIT_COUNT:
+           r = random.randrange(H)
+           c = random.randrange(W)   
+
+           if board[r, c].item() == 0:
+               board[r, c] = torch.tensor(FRUIT_VALUE, dtype=DTYPE)
+               placed += 1
+
+       self.chunk_db.save_chunk(chunk_id, board)## mabye enough to mark as dirty
+           
     async def _flush_loop(self):
         """Periodically write all dirty chunks to disk."""
         while True:
@@ -67,6 +92,7 @@ class WorldService:
                 await asyncio.sleep(5)
             except Exception:
                 logger.exception("Error during flush loop")
+                
 
     async def get_spawn_position(self, user_id: str) -> Tuple[str, Coord]:
         """Return stored or random spawn position for a player."""
@@ -76,63 +102,31 @@ class WorldService:
             board = self.ensure_chunk(chunk_id)
             return chunk_id, Coord(row, col)
         board = self.ensure_chunk(self.root_chunk_id)
-        return self.root_chunk_id, BoardUtils.random_empty_cell(board)
+        
+        import random
+        for _ in range(4096):
+            r, c = random.randrange(H), random.randrange(W)
+            if self.chunk_players.is_cell_free(self.root_chunk_id, r, c):
+                return self.root_chunk_id, Coord(r,c)
+         
+        return Coord(H // 2, W // 2)
+ 
       
 
     async def spawn_player(self, user_id: str, chunk_id: str, spawn: Coord) -> PlayerState:
-           """Spawn player into chunk, assigning color directly if not already placed."""
-           print("In the spawn function")
-           color = get_player_color_by_user_id(user_id)
-           lock = self._lock_for(chunk_id)
-
-           async with lock:
-               board = self.ensure_chunk(chunk_id)
-
-               # ✅ Only paint if the cell is empty (0 or some defined empty value)
-               if BoardUtils.is_empty(board, spawn.row, spawn.col):##??I think that I can remove this condition
-                   print("the board is empty there")
-                   underlying = torch.zeros_like(board[spawn.row, spawn.col])
-                #    board[spawn.row, spawn.col] = torch.tensor(color, dtype=DTYPE)
-                   board[spawn.row, spawn.col] = color
-                
-                   self._mark_dirty(chunk_id)
-               else:    
-                   print("the board isn't empty there")
-                   # Already colored → keep existing value as underlying
-                   underlying = board[spawn.row, spawn.col].clone()
-   
-           # Save position (no overwrite on board)
-           self.player_db.save_position(user_id, chunk_id, spawn.row, spawn.col)
-           
+           board = self.ensure_chunk(chunk_id)           
            return PlayerState(
                user_id=user_id,
                chunk_id=chunk_id,
                pos=spawn,
-               visible_cell=color,
-               underlying_cell=underlying,
-               color=color,
            )
                     
-              
-          
-    async def despawn_player(self, state: PlayerState) -> None:
+                     
+    def despawn_player(self, state: PlayerState) -> None:#mabye I can dlete this function??
         """When player disconnects."""
-        lock = self._lock_for(state.chunk_id)
-        async with lock:
-            board = self.ensure_chunk(state.chunk_id)
-            board[state.pos.row, state.pos.col] = state.underlying_cell  # restore what was under
-            self._mark_dirty(state.chunk_id)
-            self.chunk_db.save_chunk(state.chunk_id, board)
-        self.player_db.save_position(state.user_id, state.chunk_id, state.pos.row, state.pos.col)
-        self.maybe_unload_chunk(state.chunk_id)
-
-    def maybe_unload_chunk(self, chunk_id: str) -> None:
-        """Unload chunk from memory if no players remain."""
-        players = self.chunk_players.get_players_in_chunk(chunk_id)
-        if not players and chunk_id in self._chunks:
-            del self._chunks[chunk_id]
-            logger.info(f"Unloaded chunk {chunk_id} from memory")
-
+        self.player_db.upsert(state.user_id, state.chunk_id, state.pos.row, state.pos.col)
+      
+   
     @staticmethod
     def neighbor_chunk_id(chunk_id: str, direction: Direction) -> str:
         cx, cy = coords_from_chunk_id(chunk_id)
@@ -142,6 +136,6 @@ class WorldService:
             cy += 1
         elif direction == "left":
             cx -= 1
-        elif direction == "right":
+        elif direction == "right":   
             cx += 1
         return chunk_id_from_coords(cx, cy)

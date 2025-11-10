@@ -12,18 +12,13 @@ interface MessageItemProps {
   isOwn: boolean;
   onReact: (messageId: string, reaction: Reaction) => void;
   onQuote: (message: Message) => void;
-  /** קפיצה להודעה המצוטטת (אם קיימת) */
   onJumpTo?: (messageId: string) => void;
-  /** הדגשה ויזואלית סביב הבועה */
   isHighlighted?: boolean;
-  /** אופציונלי: כיבוי ההדגשה בלחיצה מחוץ לבועה */
   onClearHighlight?: () => void;
   currentPlayerId: string;
-  /** מחיקה רכה */
   onDelete?: (messageId: string) => void;
 }
 
-/* ---------- Modal לאישור מחיקה (פנימי לקובץ) ---------- */
 const ConfirmDialog: React.FC<{
   title?: string;
   message: string;
@@ -66,7 +61,6 @@ const ConfirmDialog: React.FC<{
   </div>
 );
 
-/* ---------- עזרי זמן ---------- */
 function minuteKey(ts?: string) {
   if (!ts) return '';
   const d = new Date(ts);
@@ -79,7 +73,6 @@ function formatTime(ts: string) {
   return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
-/* ---------- עיגול פינות לפי אשכול דקה ---------- */
 function roundedByCluster(isOwn: boolean, isClusterStart: boolean, isClusterEnd: boolean) {
   if (!isClusterStart && !isClusterEnd) return 'rounded-md';
   if (isClusterStart && isClusterEnd) {
@@ -107,7 +100,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const [hover, setHover] = useState(false);
   const bubbleRef = useRef<HTMLDivElement>(null);
 
-  // מודל מחיקה
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const openDeleteConfirm = (id: string) => {
@@ -134,7 +126,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
   const safeMessageId =
     message.id || `${message.timestamp}|${message.from}|${message.message ?? ''}`;
 
-  // תחילת/סוף אשכול ע"פ דקה ושולח
   const isClusterStart = useMemo(() => {
     if (!prevMessage) return true;
     const sameSender = prevMessage.from === message.from;
@@ -149,7 +140,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
   const showTimeHeader = isClusterStart;
 
-  // צבעי בועה
   const surface = isOwn
     ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white'
     : isBot
@@ -158,19 +148,17 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
   const bubbleRound = roundedByCluster(isOwn, isClusterStart, isClusterEnd);
 
-  // מסגרת הדגשה אופציונלית (רק סביב הבועה)
   const highlightRing = isHighlighted
     ? 'ring-2 ring-cyan-400/90 ring-offset-2 ring-offset-slate-900'
     : '';
 
-  // סגירת ההדגשה בלחיצה מחוץ לבועה (מופעל רק כשהודגש)
   useEffect(() => {
     if (!isHighlighted) return;
 
     const handleClick = (e: MouseEvent) => {
       const target = e.target as Node | null;
       if (!bubbleRef.current) return;
-      if (target && bubbleRef.current.contains(target)) return; // קליק בתוך הבועה – לא מנקים
+      if (target && bubbleRef.current.contains(target)) return; 
       onClearHighlight?.();
     };
 
@@ -195,10 +183,8 @@ const MessageItem: React.FC<MessageItemProps> = ({
 
   const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
 
-  // טקסט להצגה (מחיקה רכה => placeholder)
   const displayText = isDeleted ? 'Message deleted' : (message.message ?? '');
 
-  // טקסט לציטוט (אם המצוטט נמחק)
   const quotedIsDeleted = !!message.quoted_message?.deleted;
   const quotedPreviewText = quotedIsDeleted
     ? 'Message deleted'
@@ -223,13 +209,11 @@ const MessageItem: React.FC<MessageItemProps> = ({
           onMouseLeave={() => setHover(false)}
         >
           <div className="relative">
-            {/* הבועה (עם מזהה ו-ref כדי להדגיש רק אותה ולזהות קליקים מחוץ) */}
             <div
               id={`bubble-${safeMessageId}`}
               ref={bubbleRef}
               className={bubbleClasses}
             >
-              {/* תיבת ציטוט (אם קיימת) - לחיצה קופצת להודעה המקורית */}
               {message.quoted_message && (
                 <button
                   type="button"
@@ -249,11 +233,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
                 </button>
               )}
 
-              {/* טקסט ההודעה */}
               {displayText}
             </div>
 
-            {/* Badge לייק/דיסלייק קטן */}
             {myReaction && (
               <span
                 className="
@@ -270,7 +252,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
               </span>
             )}
 
-            {/* תפריט פעולות צף */}
             <div
               className={`
                 absolute top-0 ${isOwn ? 'right-3' : 'left-3'}
@@ -331,7 +312,6 @@ const MessageItem: React.FC<MessageItemProps> = ({
                   <Copy className="w-4 h-4" />
                 </button>
 
-                {/* מחיקה רכה – רק להודעות שלי, כל עוד לא נמחקו */}
                 {isOwn && !isDeleted && onDelete && (
                   <button
                     onClick={() => openDeleteConfirm(safeMessageId)}
@@ -347,11 +327,9 @@ const MessageItem: React.FC<MessageItemProps> = ({
           </div>
         </div>
 
-        {/* רווח אנכי דק בין הודעות */}
         <div className="h-px" />
       </div>
 
-      {/* מודל אישור מחיקה */}
       {confirmVisible && (
         <ConfirmDialog
           message="Are you sure you want to delete this message?"
